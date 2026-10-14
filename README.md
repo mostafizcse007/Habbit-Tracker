@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Habit Tracker
 
-## Getting Started
+A habit tracking web application designed to help users build routines, log daily completions, and visualize consistency over time.
 
-First, run the development server:
+## Tech Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS
+- shadcn/ui (Base UI)
+- Supabase (PostgreSQL with Row Level Security & Auth)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- User authentication with email and password
+- Full habit lifecycle management (create, edit, archive, delete)
+- Customizable habit frequencies (by weekday) and colors
+- Daily dashboard checklist computed in local browser time
+- Optimistic completion toggles with server synchronization
+- Streak calculations (current streak and longest streak)
+- Completion rate statistics (7-day and 30-day windows)
+- 7-day visual consistency history strips
+- Responsive design tailored for desktop and mobile viewports
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd habit-tracker
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Set up environment variables:
+   Copy `.env.example` to `.env.local` and configure your Supabase credentials:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. Set up the database:
+   Run the SQL statements from `supabase/schema.sql` in your Supabase project's SQL editor.
 
-## Deploy on Vercel
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Known Limitations
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- The page does not roll over to the new day if left open past midnight.
+- Only the first 1000 logs are loaded.
+- There is no password reset flow yet.
