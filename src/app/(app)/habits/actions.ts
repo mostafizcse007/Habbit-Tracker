@@ -1,0 +1,188 @@
+"use server"
+
+import { revalidatePath } from "next/cache"
+import { z } from "zod"
+import { createClient } from "@/lib/supabase/server"
+
+const habitSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name must be between 1 and 80 characters")
+    .max(80, "Name must be between 1 and 80 characters"),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a valid 6-digit hex code"),
+  frequency: z
+    .array(z.number().int().min(0).max(6))
+    .min(1, "Select at least one day"),
+})
+
+const reorderSchema = z
+  .array(z.string().uuid("Invalid habit ID"))
+  .min(1, "At least one habit ID is required")
+  .max(200, "Too many habit IDs")
+  .refine((items) => new Set(items).size === items.length, {
+    message: "Duplicate habit IDs are not allowed",
+  })
+
+export type HabitActionState = {
+  error?: string
+  success?: boolean
+} | null
+
+export async function createHabit(
+  prevState: HabitActionState,
+  formData: FormData
+): Promise<HabitActionState> {
+  const rawFrequency = formData.getAll("frequency").map((val) => Number(val))
+  const parsed = habitSchema.safeParse({
+    name: formData.get("name"),
+    color: formData.get("color"),
+    frequency: rawFrequency,
+  })
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const { data: highestHabit } = await supabase
+    .from("habits")
+    .select("sort_order")
+    .eq("user_id", user.id)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const nextSortOrder = highestHabit ? highestHabit.sort_order + 1 : 1
+
+  const { error } = await supabase.from("habits").insert({
+    name: parsed.data.name,
+    color: parsed.data.color,
+    frequency: parsed.data.frequency,
+    sort_order: nextSortOrder,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  return { success: true }
+}
+
+export async function updateHabit(
+  prevState: HabitActionState,
+  formData: FormData
+): Promise<HabitActionState> {
+  const id = formData.get("id")
+  if (typeof id !== "string" || !id.trim()) {
+    return { error: "Habit ID is required" }
+  }
+
+  const rawFrequency = formData.getAll("frequency").map((val) => Number(val))
+  const parsed = habitSchema.safeParse({
+    name: formData.get("name"),
+    color: formData.get("color"),
+    frequency: rawFrequency,
+  })
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input" }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("habits")
+    .update({
+      name: parsed.data.name,
+      color: parsed.data.color,
+      frequency: parsed.data.frequency,
+    })
+    .eq("id", id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  return { success: true }
+}
+
+export async function archiveHabit(id: string): Promise<HabitActionState> {
+  if (!id) {
+    return { error: "Habit ID is required" }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("habits")
+    .update({ archived: true })
+    .eq("id", id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  return { success: true }
+}
+
+export async function deleteHabit(id: string): Promise<HabitActionState> {
+  if (!id) {
+    return { error: "Habit ID is required" }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from("habits").delete().eq("id", id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  return { success: true }
+}
+
+export async function reorderHabits(
+  ids: string[]
+): Promise<{ error: string } | { success: true }> {
+  const parsed = reorderSchema.safeParse(ids)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid habit IDs" }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const { error } = await supabase.rpc("reorder_habits", {
+    habit_ids: parsed.data,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  return { success: true }
+}
