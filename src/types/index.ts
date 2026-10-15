@@ -10,5 +10,10 @@ export type UserAchievement =
   Database["public"]["Tables"]["user_achievements"]["Row"]
 export type UserAchievementInsert =
   Database["public"]["Tables"]["user_achievements"]["Insert"]
+export type WeeklyReview = Database["public"]["Tables"]["weekly_reviews"]["Row"]
+export type WeeklyReviewInsert =
+  Database["public"]["Tables"]["weekly_reviews"]["Insert"]
+export type WeeklyReviewUpdate =
+  Database["public"]["Tables"]["weekly_reviews"]["Update"]
 
 export type { Database }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
 import { z } from "zod"
@@ -9,6 +10,38 @@ interface HabitPageProps {
 }
 
 const idSchema = z.string().uuid()
+
+export async function generateMetadata({
+  params,
+}: HabitPageProps): Promise<Metadata> {
+  const { id } = await params
+  const parseResult = idSchema.safeParse(id)
+  if (!parseResult.success) {
+    return {
+      title: "Habit",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    }
+  }
+
+  const supabase = await createClient()
+  const { data: habit } = await supabase
+    .from("habits")
+    .select("name")
+    .eq("id", id)
+    .eq("archived", false)
+    .maybeSingle()
+
+  return {
+    title: habit?.name || "Habit",
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
+}
 
 export default async function HabitPage({ params }: HabitPageProps) {
   await connection()

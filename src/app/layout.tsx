@@ -1,7 +1,8 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Bricolage_Grotesque } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE, SITE_URL } from "@/lib/brand"
 import "./globals.css"
 
 const bricolageGrotesque = Bricolage_Grotesque({
@@ -12,9 +13,32 @@ const bricolageGrotesque = Bricolage_Grotesque({
 })
 
 export const metadata: Metadata = {
-  title: "Habit Tracker",
-  description:
-    "Track your daily habits, build streaks, and achieve your consistency goals.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${APP_NAME}: ${APP_TAGLINE}`,
+    template: `%s | ${APP_NAME}`,
+  },
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  openGraph: {
+    siteName: APP_NAME,
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F3F4F1" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F1114" },
+  ],
 }
 
 export default function RootLayout({
@@ -26,6 +50,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${bricolageGrotesque.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">

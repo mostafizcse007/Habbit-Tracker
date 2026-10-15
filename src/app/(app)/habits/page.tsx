@@ -1,8 +1,18 @@
+import type { Metadata } from "next"
 import { connection } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { HabitDialog } from "@/components/habits/habit-dialog"
 import { HabitList } from "@/components/habits/habit-list"
+import { StarterHabits } from "@/components/habits/starter-habits"
+
+export const metadata: Metadata = {
+  title: "Habits",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default async function HabitsPage() {
   await connection()
@@ -40,10 +50,16 @@ export default async function HabitsPage() {
         />
       </div>
 
-      <HabitList
-        key={habits.map((h) => h.id).join(",")}
-        habits={habits}
-      />
+      {habits.length === 0 ? (
+        <div className="mt-10">
+          <StarterHabits />
+        </div>
+      ) : (
+        <HabitList
+          key={habits.map((h) => h.id).join(",")}
+          habits={habits}
+        />
+      )}
     </div>
   )
 }

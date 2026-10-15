@@ -41,9 +41,23 @@ import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { WeekdayBarChart } from "@/components/habits/weekday-bar-chart"
 import { cn } from "@/lib/utils"
+import { generateWeeklyReview } from "@/app/(app)/analytics/actions"
+import { getReviewPeriod } from "@/lib/review"
+
+export interface WeeklyReviewData {
+  period_end: string
+  content: string
+  generations: number
+  updated_at: string
+}
 
 interface AnalyticsViewProps {
   habits: Habit[]
+  period?: {
+    start: string
+    end: string
+  }
+  initialReview?: WeeklyReviewData | null
 }
 
 const WEEKDAY_PLURALS: Record<number, string> = {
@@ -63,6 +77,12 @@ function formatSquareTitleDate(dateStr: string): string {
   const month = d.toLocaleDateString("en-US", { month: "short" })
   const year = d.getFullYear()
   return `${weekday} ${day} ${month} ${year}`
+}
+
+function formatPeriodDate(dateStr: string): string {
+  const d = parseLocalDateString(dateStr)
+  const month = d.toLocaleDateString("en-US", { month: "short" })
+  return `${d.getDate()} ${month}`
 }
 
 interface ChartTooltipPayload {
@@ -104,11 +124,46 @@ function CustomChartTooltip({ active, payload }: ChartTooltipProps) {
   )
 }
 
-export function AnalyticsView({ habits }: AnalyticsViewProps) {
+export function AnalyticsView({
+  habits,
+  period,
+  initialReview,
+}: AnalyticsViewProps) {
   const [today, setToday] = useState<string>("")
   const [logsByHabit, setLogsByHabit] = useState<Record<string, string[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [range, setRange] = useState<7 | 30 | 90>(30)
+
+  const [review, setReview] = useState<WeeklyReviewData | null>(
+    initialReview ?? null
+  )
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [notEnough, setNotEnough] = useState(false)
+  const [reviewError, setReviewError] = useState<string | null>(null)
+
+  const activePeriod = useMemo(() => {
+    if (period) return period
+    return getReviewPeriod(getLocalDateString())
+  }, [period])
+
+  const handleGenerateReview = async (regenerate: boolean) => {
+    setReviewError(null)
+    setIsGenerating(true)
+    try {
+      const res = await generateWeeklyReview(regenerate)
+      if ("error" in res) {
+        setReviewError(res.error)
+      } else if ("notEnough" in res) {
+        setNotEnough(true)
+      } else if (res.success) {
+        setReview(res.review)
+      }
+    } catch {
+      setReviewError("Could not write your review right now. Try again later.")
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const mapScrollRef = useRef<HTMLDivElement>(null)
 
@@ -319,7 +374,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
         <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-card p-5 md:p-6 space-y-2">
+              <div key={i} className="bg-card p-4 sm:p-5 md:p-6 space-y-2">
                 <Skeleton className="h-9 w-20" />
                 <Skeleton className="h-4 w-24" />
               </div>
@@ -327,13 +382,13 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
           </div>
         </div>
 
-        <div className="mt-6 bg-card border border-border rounded-[14px] p-6 space-y-4">
+        <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 space-y-4">
           <Skeleton className="h-5 w-36" />
           <Skeleton className="h-5 w-full max-w-[480px]" />
           <Skeleton className="h-5 w-full max-w-[420px]" />
         </div>
 
-        <div className="mt-6 bg-card border border-border rounded-[14px] p-6 space-y-4">
+        <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-4 w-16" />
@@ -342,7 +397,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
           <Skeleton className="h-[260px] w-full rounded-lg mt-4" />
         </div>
 
-        <div className="mt-6 bg-card border border-border rounded-[14px] p-6 space-y-4">
+        <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-20" />
@@ -351,7 +406,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
           <Skeleton className="h-12 w-full rounded-lg" />
         </div>
 
-        <div className="mt-6 bg-card border border-border rounded-[14px] p-6 space-y-6">
+        <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 space-y-6">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-28" />
             <Skeleton className="h-4 w-20" />
@@ -364,7 +419,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
           </div>
         </div>
 
-        <div className="mt-6 bg-card border border-border rounded-[14px] p-6 space-y-6">
+        <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 space-y-6">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-4 w-40" />
@@ -436,7 +491,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
 
       <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="text-[36px] font-bold leading-none tracking-[-0.03em] tabular-nums text-foreground">
               {summary.rate !== null ? `${summary.rate}%` : "—"}
             </div>
@@ -445,7 +500,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
             </div>
           </div>
 
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="text-[36px] font-bold leading-none tracking-[-0.03em] tabular-nums text-foreground">
               {summary.perfectDays}
             </div>
@@ -454,7 +509,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
             </div>
           </div>
 
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="text-[36px] font-bold leading-none tracking-[-0.03em] tabular-nums text-foreground">
               {checkInsCount}
             </div>
@@ -463,7 +518,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
             </div>
           </div>
 
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="flex items-baseline gap-1.5">
               <span className="text-[36px] font-bold leading-none tracking-[-0.03em] tabular-nums text-foreground">
                 {longestStreakData.max}
@@ -481,7 +536,117 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
         </div>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-6 overflow-hidden">
+      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+          <h2 className="text-[17px] font-semibold text-foreground">
+            Weekly review
+          </h2>
+          <span className="text-[14px] text-muted-foreground tabular-nums">
+            {formatPeriodDate(activePeriod.start)} to {formatPeriodDate(activePeriod.end)}
+          </span>
+        </div>
+
+        <div className="mt-4">
+          {isGenerating ? (
+            <div className="space-y-4">
+              <div>
+                <button
+                  type="button"
+                  disabled
+                  className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold opacity-60 cursor-not-allowed"
+                >
+                  Writing...
+                </button>
+              </div>
+              <div className="space-y-2.5">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/6" />
+              </div>
+            </div>
+          ) : review ? (
+            <div>
+              <div>
+                {review.content
+                  .split(/\n\s*\n/)
+                  .map((p) => p.trim())
+                  .filter(Boolean)
+                  .map((para, idx) => (
+                    <p
+                      key={idx}
+                      className={cn(
+                        "text-[18px] leading-[1.5] text-foreground",
+                        idx > 0 && "mt-4"
+                      )}
+                    >
+                      {para}
+                    </p>
+                  ))}
+              </div>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                <span className="text-[13px] text-muted-foreground">
+                  Written by AI from your numbers. It can make mistakes.
+                </span>
+                <div className="flex items-center gap-2">
+                  {review.generations >= 3 ? (
+                    <span className="text-[14px] text-muted-foreground">
+                      No regenerations left for this week.
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateReview(true)}
+                        className="text-[14px] text-foreground hover:underline cursor-pointer"
+                      >
+                        Regenerate
+                      </button>
+                      <span className="text-[14px] text-muted-foreground">
+                        {3 - review.generations} left
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : notEnough ? (
+            <div>
+              <p className="text-[15px] text-muted-foreground">
+                Not enough history yet. Reviews appear after a few days of check-ins.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-[15px] text-text-soft">
+                Get a short written summary of your last 7 days, with one suggestion for
+                the week ahead.
+              </p>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateReview(false)}
+                  className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer transition-colors hover:bg-primary/90"
+                >
+                  Generate review
+                </button>
+              </div>
+            </div>
+          )}
+
+          {reviewError && (
+            <p role="alert" className="mt-3 text-[14px] text-destructive">
+              {reviewError}
+            </p>
+          )}
+
+          <p className="mt-4 text-[13px] text-muted-foreground">
+            Habit names and weekly numbers are sent to Google&apos;s Gemini API to write
+            the review.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
         <h2 className="text-[17px] font-semibold text-foreground">
           What stands out
         </h2>
@@ -500,7 +665,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
         </div>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-6 overflow-hidden">
+      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[17px] font-semibold text-foreground">
@@ -523,7 +688,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
           <div
             role="img"
             aria-label={`Line chart of completion rate over the last ${range} days, averaging ${summary.rate ?? 0}%`}
-            className="w-full h-[220px] md:h-[260px] mt-6"
+            className="w-full h-[220px] md:h-[260px] mt-6 min-w-0"
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
@@ -567,7 +732,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
         )}
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-6 overflow-hidden">
+      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
         <div className="flex items-center justify-between">
           <h2 className="text-[17px] font-semibold text-foreground">
             By habit
@@ -638,12 +803,12 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
         }
       />
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-6 overflow-hidden">
+      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <h2 className="text-[17px] font-semibold text-foreground">
             Consistency map
           </h2>
-          <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground">
             <span>Less</span>
             <span className="size-[12px] rounded-[3px] bg-muted" />
             <span className="size-[12px] rounded-[3px] bg-foreground/25" />
@@ -654,7 +819,7 @@ export function AnalyticsView({ habits }: AnalyticsViewProps) {
           </div>
         </div>
 
-        <div ref={mapScrollRef} className="overflow-x-auto pb-2">
+        <div ref={mapScrollRef} className="overflow-x-auto pb-2 min-w-0 max-w-full">
           <div
             role="img"
             aria-label="Consistency map for the last 12 months"

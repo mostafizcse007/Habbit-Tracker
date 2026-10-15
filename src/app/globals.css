@@ -73,6 +73,7 @@
   --radius: 0.625rem;
   --highlight: rgba(255,214,10,0.22);
   --highlight-solid: #FFE45C;
+  --marker: #FFE45C;
   --line-strong: #C4C7BF;
   --text-soft: #3F444B;
   --chart-1: oklch(0.87 0 0);
@@ -111,6 +112,7 @@
   --ring: #ECEDEA;
   --highlight: rgba(255,214,10,0.10);
   --highlight-solid: #FFE45C;
+  --marker: rgba(255, 228, 92, 0.32);
   --line-strong: #444A53;
   --text-soft: #C3C7CC;
   --chart-1: oklch(0.87 0 0);
@@ -139,5 +141,15 @@
   html {
     @apply font-sans;
     scrollbar-gutter: stable;
+  }
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }

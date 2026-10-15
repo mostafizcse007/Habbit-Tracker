@@ -190,7 +190,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-card p-5 md:p-6 space-y-2">
+              <div key={i} className="bg-card p-4 sm:p-5 md:p-6 space-y-2">
                 <Skeleton className="h-9 w-20" />
                 <Skeleton className="h-4 w-24" />
               </div>
@@ -198,7 +198,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           </div>
         </div>
 
-        <div className="mt-6 bg-card border border-border rounded-[14px] p-6 space-y-6">
+        <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 space-y-6">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-32" />
             <Skeleton className="h-4 w-48" />
@@ -272,7 +272,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
 
       <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="flex items-baseline gap-1.5">
               {streaks.current > 0 ? (
                 <>
@@ -294,7 +294,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
             </div>
           </div>
 
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="flex items-baseline gap-1.5">
               {streaks.longest > 0 ? (
                 <>
@@ -316,7 +316,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
             </div>
           </div>
 
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="flex items-baseline gap-0.5">
               {rateStats.rate !== null ? (
                 <>
@@ -336,7 +336,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
             </div>
           </div>
 
-          <div className="bg-card p-5 md:p-6">
+          <div className="bg-card p-4 sm:p-5 md:p-6">
             <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums">
               {logs.length}
             </span>
@@ -347,12 +347,12 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         </div>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-6">
+      <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div className="text-[17px] font-semibold text-foreground">
             Last 12 months
           </div>
-          <div className="flex items-center gap-4 text-[12px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <span
                 className="size-[12px] rounded-[3px] shrink-0"
@@ -371,7 +371,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           </div>
         </div>
 
-        <div ref={scrollContainerRef} className="overflow-x-auto pb-2">
+        <div ref={scrollContainerRef} className="overflow-x-auto pb-2 min-w-0 max-w-full">
           <div
             role="img"
             aria-label={`Check-in history for the last 12 months: ${heatmapCheckInsCount} check-ins`}

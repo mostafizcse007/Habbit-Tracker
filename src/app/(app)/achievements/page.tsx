@@ -1,7 +1,16 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { connection } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { AchievementsView } from "@/components/achievements/achievements-view"
+
+export const metadata: Metadata = {
+  title: "Achievements",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default async function AchievementsPage() {
   await connection()

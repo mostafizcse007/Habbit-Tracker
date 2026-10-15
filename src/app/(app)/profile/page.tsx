@@ -1,9 +1,18 @@
+import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { connection } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { AvatarUpload } from "@/components/profile/avatar-upload"
 import { ProfileForm } from "@/components/profile/profile-form"
 import { PasswordForm } from "@/components/profile/password-form"
+
+export const metadata: Metadata = {
+  title: "Profile",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default async function ProfilePage() {
   await connection()

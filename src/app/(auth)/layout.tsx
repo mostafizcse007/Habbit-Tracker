@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { APP_NAME, APP_TAGLINE } from "@/lib/brand"
+import { LogoMark } from "@/components/brand/logo-mark"
 
 const SHEET_ROWS = [
   { color: "#F97316", marks: "DDDDDDD" },
@@ -17,15 +19,16 @@ export default function AuthLayout({
         <div>
           <Link
             href="/dashboard"
-            className="text-[20px] font-bold tracking-[-0.02em] text-inherit"
+            className="inline-flex items-center gap-2.5 text-[20px] font-bold tracking-[-0.02em] text-inherit"
           >
-            Habit Tracker
+            <LogoMark size={28} />
+            <span>{APP_NAME}</span>
           </Link>
         </div>
 
         <div>
           <h1 className="text-[56px] leading-none font-bold tracking-[-0.045em] max-w-[440px]">
-            Small habits, big streaks.
+            {APP_TAGLINE}
           </h1>
 
           <div
@@ -81,16 +84,16 @@ export default function AuthLayout({
       </div>
 
       <div className="flex min-h-screen flex-col">
-        <div className="lg:hidden px-6 pt-6">
+        <div className="lg:hidden px-4 sm:px-6 pt-6">
           <Link
             href="/dashboard"
             className="text-[19px] font-bold tracking-[-0.02em] text-foreground"
           >
-            Habit Tracker
+            {APP_NAME}
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="flex flex-1 items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
           <div className="w-full max-w-[380px]">{children}</div>
         </div>
       </div>

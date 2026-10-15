@@ -34,7 +34,7 @@ export function WeekdayBarChart({
   const { best } = getBestAndWorstWeekday(rates, 3)
 
   return (
-    <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-6">
+    <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <h2 className="text-[17px] font-semibold text-foreground">By weekday</h2>
         <span className="text-[14px] text-muted-foreground">{daysLabel}</span>
@@ -44,7 +44,7 @@ export function WeekdayBarChart({
         {caption}
       </p>
 
-      <div className="flex gap-3 mt-6 items-end justify-between sm:justify-start">
+      <div className="flex gap-2 sm:gap-3 mt-6 items-end justify-between sm:justify-start">
         {rates.map((item) => {
           const scheduled = isScheduled
             ? isScheduled(item.weekday)

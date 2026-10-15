@@ -15,7 +15,7 @@ export function AppNav({ mobile }: AppNavProps) {
     { href: "/dashboard", label: "Today" },
     { href: "/habits", label: "Habits" },
     { href: "/analytics", label: "Analytics" },
-    { href: "/achievements", label: "Achievements" },
+    { href: "/achievements", label: "Badges", ariaLabel: "Achievements" },
   ]
 
   return (
@@ -23,11 +23,11 @@ export function AppNav({ mobile }: AppNavProps) {
       className={cn(
         "flex items-center",
         mobile
-          ? "gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? "gap-4 sm:gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : "gap-[24px]"
       )}
     >
-      {links.map(({ href, label }) => {
+      {links.map(({ href, label, ariaLabel }) => {
         const isActive =
           pathname === href ||
           (href !== "/dashboard" && pathname.startsWith(href))
@@ -35,6 +35,7 @@ export function AppNav({ mobile }: AppNavProps) {
           <Link
             key={href}
             href={href}
+            aria-label={ariaLabel}
             className={cn(
               "text-[15px] transition-colors whitespace-nowrap shrink-0",
               mobile ? "py-2.5" : "py-1",

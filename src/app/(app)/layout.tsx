@@ -6,6 +6,7 @@ import { AppNav } from "@/components/app-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { UserMenu } from "@/components/user-menu"
 import { TimezoneSync } from "@/components/timezone-sync"
+import { APP_NAME } from "@/lib/brand"
 
 export default async function AppLayout({
   children,
@@ -50,7 +51,7 @@ export default async function AppLayout({
                 href="/dashboard"
                 className="text-[19px] sm:text-[20px] font-bold tracking-[-0.02em] text-foreground"
               >
-                Habit Tracker
+                {APP_NAME}
               </Link>
               <div className="hidden sm:flex">
                 <AppNav />
@@ -77,7 +78,7 @@ export default async function AppLayout({
         </div>
       </header>
 
-      <main className="max-w-[1040px] mx-auto w-full px-4 sm:px-8 py-8 sm:py-10 flex-1">
+      <main className="max-w-[1040px] mx-auto w-full px-4 sm:px-8 py-8 sm:py-10 flex-1 min-w-0">
         {children}
       </main>
     </div>

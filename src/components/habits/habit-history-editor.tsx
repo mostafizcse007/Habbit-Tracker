@@ -102,7 +102,7 @@ export function HabitHistoryEditor({
   }
 
   return (
-    <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-6">
+    <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-3 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h2 className="text-[17px] font-semibold text-foreground">
           Edit history
@@ -133,12 +133,12 @@ export function HabitHistoryEditor({
       </div>
 
       <div className="flex flex-col md:flex-row md:items-start gap-6 md:gap-10 mt-6">
-        <div className="w-full md:w-auto shrink-0">
-          <div className="grid grid-cols-7 gap-1 md:gap-1.5 mb-1.5 text-center text-[13px] text-muted-foreground select-none">
+        <div className="w-full md:w-[350px] shrink-0">
+          <div className="grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 md:gap-1.5 mb-1.5 text-center text-[13px] text-muted-foreground select-none">
             {WEEKDAYS.map((w, i) => (
               <div
                 key={i}
-                className="h-6 flex items-center justify-center font-medium"
+                className="h-6 w-full max-w-[44px] md:max-w-[48px] mx-auto flex items-center justify-center font-medium"
               >
                 <span className="hidden md:inline">{w.short}</span>
                 <span className="md:hidden">{w.narrow}</span>
@@ -146,14 +146,14 @@ export function HabitHistoryEditor({
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 md:gap-1.5">
+          <div className="grid grid-cols-[repeat(7,minmax(0,1fr))] gap-1 md:gap-1.5">
             {gridRows.flatMap((row, rowIdx) =>
               row.map((date, colIdx) => {
                 if (!date) {
                   return (
                     <div
                       key={`empty-${rowIdx}-${colIdx}`}
-                      className="size-[44px] md:size-[48px]"
+                      className="w-full max-w-[44px] md:max-w-[48px] aspect-square mx-auto"
                       aria-hidden="true"
                     />
                   )
@@ -203,7 +203,7 @@ export function HabitHistoryEditor({
                     onClick={() => onToggle(date)}
                     style={stateStyle}
                     className={cn(
-                      "size-[44px] md:size-[48px] rounded-lg text-[15px] tabular-nums flex items-center justify-center select-none motion-safe:transition-colors motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      "w-full max-w-[44px] md:max-w-[48px] aspect-square mx-auto rounded-lg text-[15px] tabular-nums flex items-center justify-center select-none motion-safe:transition-colors motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       stateClass,
                       isToday &&
                         "ring-2 ring-foreground ring-offset-2 ring-offset-card",

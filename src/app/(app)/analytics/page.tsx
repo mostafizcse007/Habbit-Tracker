@@ -1,11 +1,53 @@
+import type { Metadata } from "next"
 import { connection } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { AnalyticsView } from "@/components/analytics/analytics-view"
+import { getTodayInTimeZone, isValidTimeZone } from "@/lib/timezone"
+import { getReviewPeriod } from "@/lib/review"
+
+export const maxDuration = 30
+
+export const metadata: Metadata = {
+  title: "Analytics",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default async function AnalyticsPage() {
   await connection()
 
   const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("timezone")
+        .eq("id", user.id)
+        .maybeSingle()
+    : { data: null }
+
+  const tz =
+    profile?.timezone && isValidTimeZone(profile.timezone)
+      ? profile.timezone
+      : "UTC"
+
+  const todayInTz = getTodayInTimeZone(tz)
+  const period = getReviewPeriod(todayInTz)
+
+  const { data: initialReview } = user
+    ? await supabase
+        .from("weekly_reviews")
+        .select("period_end, content, generations, updated_at")
+        .eq("period_end", period.end)
+        .maybeSingle()
+    : { data: null }
+
   const { data: habits, error } = await supabase
     .from("habits")
     .select("*")
@@ -23,5 +65,11 @@ export default async function AnalyticsPage() {
     )
   }
 
-  return <AnalyticsView habits={habits ?? []} />
+  return (
+    <AnalyticsView
+      habits={habits ?? []}
+      period={period}
+      initialReview={initialReview ?? null}
+    />
+  )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -14,10 +13,11 @@ import { calculateStreaks, calculateCompletionRate } from "@/lib/streaks"
 import { createClient } from "@/lib/supabase/client"
 import { fetchAllLogs } from "@/lib/logs"
 import { toggleHabitLog } from "@/app/(app)/dashboard/actions"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { HabitDialog } from "@/components/habits/habit-dialog"
 import { WeekSheet } from "@/components/habits/week-sheet"
+import { StarterHabits } from "@/components/habits/starter-habits"
 import type { CellState } from "@/components/habits/week-cell"
 import { useAchievementCheck } from "@/hooks/use-achievement-check"
 
@@ -185,18 +185,13 @@ export function DashboardContent({ habits }: DashboardContentProps) {
               {dateHeadline}
             </h1>
             <p className="mt-[14px] md:mt-[18px] text-[16px] md:text-[19px] leading-[1.4] text-text-soft max-w-[520px]">
-              No habits yet.
+              No habits yet. Start with a few of these, or make your own.
             </p>
           </div>
         </div>
 
-        <div className="mt-7 md:mt-10 border-dashed border border-line-strong rounded-[14px] p-10 text-left">
-          <p className="text-[15px] text-muted-foreground mb-6">
-            Add your first habit and it will show up here.
-          </p>
-          <Link href="/habits" className={buttonVariants()}>
-            Create a habit
-          </Link>
+        <div className="mt-10">
+          <StarterHabits />
         </div>
       </div>
     )
@@ -279,7 +274,21 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         />
       </div>
 
+      {Object.values(logsByHabit).every((logs) => logs.length === 0) && (
+        <div
+          role="status"
+          className="mt-8 rounded-[10px] bg-highlight px-4 py-3 text-[15px] text-foreground"
+        >
+          Tap today&apos;s square on a habit to check it off. That is your first check-in.
+        </div>
+      )}
+
       <WeekSheet
+        className={
+          Object.values(logsByHabit).every((logs) => logs.length === 0)
+            ? "mt-4"
+            : undefined
+        }
         habits={habits}
         days={days}
         today={today}

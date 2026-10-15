@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
+import { HABIT_TEMPLATES } from "@/lib/habit-templates"
 
 const habitSchema = z.object({
   name: z
@@ -186,3 +187,68 @@ export async function reorderHabits(
   revalidatePath("/dashboard")
   return { success: true }
 }
+
+const templateKeysSchema = z
+  .array(z.string())
+  .min(1, "Select at least one habit")
+  .max(12, "Too many habit templates")
+  .refine((keys) => new Set(keys).size === keys.length, {
+    message: "Duplicate template keys are not allowed",
+  })
+  .refine(
+    (keys) => keys.every((key) => HABIT_TEMPLATES.some((t) => t.key === key)),
+    {
+      message: "Unknown template key",
+    }
+  )
+
+export async function createHabitsFromTemplates(
+  keys: string[]
+): Promise<{ error: string } | { success: true; added: number }> {
+  const parsed = templateKeysSchema.safeParse(keys)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid template keys" }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const selectedKeySet = new Set(parsed.data)
+  const orderedTemplates = HABIT_TEMPLATES.filter((t) =>
+    selectedKeySet.has(t.key)
+  )
+
+  const { data: highestHabit } = await supabase
+    .from("habits")
+    .select("sort_order")
+    .eq("user_id", user.id)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const startSortOrder = highestHabit ? highestHabit.sort_order + 1 : 1
+
+  const rows = orderedTemplates.map((template, index) => ({
+    name: template.name,
+    color: template.color,
+    frequency: template.frequency,
+    sort_order: startSortOrder + index,
+  }))
+
+  const { error } = await supabase.from("habits").insert(rows)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  return { success: true, added: rows.length }
+}
+

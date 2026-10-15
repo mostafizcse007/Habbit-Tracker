@@ -24,9 +24,8 @@ import type { Habit } from "@/types"
 import { cn } from "@/lib/utils"
 import { formatSchedule } from "@/lib/habit-schedule"
 import { reorderHabits } from "@/app/(app)/habits/actions"
-import { Button } from "@/components/ui/button"
-import { HabitDialog } from "@/components/habits/habit-dialog"
 import { HabitActions } from "@/components/habits/habit-actions"
+import { StarterHabits } from "@/components/habits/starter-habits"
 
 interface HabitListProps {
   habits: Habit[]
@@ -61,12 +60,12 @@ function SortableHabitRow({ habit, isFirst }: SortableHabitRowProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "min-h-[72px] px-6 flex items-center justify-between gap-[14px]",
+        "min-h-[72px] px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-[14px]",
         isFirst ? "" : "border-t border-border",
         isDragging && "relative z-10 bg-card border-y border-foreground shadow-none"
       )}
     >
-      <div className="flex items-center gap-[14px] min-w-0">
+      <div className="flex items-center gap-2.5 sm:gap-[14px] min-w-0">
         <button
           type="button"
           aria-label={`Reorder ${habit.name}`}
@@ -85,7 +84,7 @@ function SortableHabitRow({ habit, isFirst }: SortableHabitRowProps) {
           className="size-[10px] rounded-[3px] shrink-0"
           style={{ backgroundColor: habit.color }}
         />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-[17px] font-semibold text-foreground truncate">
             <Link href={`/habits/${habit.id}`} className="hover:underline">
               {habit.name}
@@ -180,24 +179,12 @@ export function HabitList({ habits }: HabitListProps) {
 
   return (
     <div>
-      <div className="mt-10 bg-card border border-border rounded-[14px] overflow-hidden">
-        {items.length === 0 ? (
-          <div className="p-10 text-left">
-            <h2 className="text-[17px] font-semibold text-foreground">
-              No habits yet
-            </h2>
-            <p className="text-[14px] text-muted-foreground mt-1 mb-6">
-              Add one and it shows up on Today.
-            </p>
-            <HabitDialog
-              trigger={
-                <Button className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer">
-                  New habit
-                </Button>
-              }
-            />
-          </div>
-        ) : (
+      {items.length === 0 ? (
+        <div className="mt-10">
+          <StarterHabits />
+        </div>
+      ) : (
+        <div className="mt-10 bg-card border border-border rounded-[14px] overflow-hidden">
           <DndContext
             id="habit-order"
             sensors={sensors}
@@ -217,8 +204,8 @@ export function HabitList({ habits }: HabitListProps) {
               ))}
             </SortableContext>
           </DndContext>
-        )}
-      </div>
+        </div>
+      )}
 
       {items.length > 0 && (
         <p className="mt-4 md:mt-5 text-[13px] md:text-[14px] text-muted-foreground">

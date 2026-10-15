@@ -113,7 +113,7 @@ export function AvatarUpload({
   const isWorking = isUploading || isPending
 
   return (
-    <div className="p-6 md:p-8 grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
+    <div className="p-4 sm:p-6 md:p-8 grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
       <div>
         <h2 className="text-[17px] font-semibold text-foreground">
           Photo
@@ -126,7 +126,7 @@ export function AvatarUpload({
       <div className="flex flex-wrap items-center gap-4">
         <Avatar name={name} avatarPath={avatarPath} size={72} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label htmlFor="avatar-file-input" className="sr-only">
             Upload profile photo
           </label>

@@ -3,6 +3,7 @@ import type { Habit } from "@/types"
 import { parseLocalDateString } from "@/lib/dates"
 import { formatSchedule } from "@/lib/habit-schedule"
 import { WeekCell, type CellState } from "./week-cell"
+import { cn } from "@/lib/utils"
 
 interface WeekSheetProps {
   habits: Habit[]
@@ -13,6 +14,7 @@ interface WeekSheetProps {
   streaksByHabit: Record<string, number>
   getCellState: (habit: Habit, date: string) => CellState
   onToggleCell: (habit: Habit, date: string) => void
+  className?: string
 }
 
 export function WeekSheet({
@@ -23,6 +25,7 @@ export function WeekSheet({
   streaksByHabit,
   getCellState,
   onToggleCell,
+  className,
 }: WeekSheetProps) {
   const dayDetails = days.map((date) => {
     const d = parseLocalDateString(date)
@@ -43,7 +46,12 @@ export function WeekSheet({
   })
 
   return (
-    <div className="mt-7 md:mt-10 bg-card border border-border rounded-[14px] overflow-hidden">
+    <div
+      className={cn(
+        "mt-7 md:mt-10 bg-card border border-border rounded-[14px] overflow-hidden",
+        className
+      )}
+    >
       <div className="hidden md:block">
         <div className="grid grid-cols-[minmax(0,1fr)_repeat(7,56px)_96px] lg:grid-cols-[minmax(0,1fr)_repeat(7,64px)_112px] h-[76px] items-stretch">
           <div className="pl-6 flex items-center text-[14px] font-medium text-muted-foreground">
@@ -160,11 +168,11 @@ export function WeekSheet({
       </div>
 
       <div className="md:hidden">
-        <div className="flex gap-1 px-3 py-2.5 overflow-x-auto justify-between sm:justify-start">
+        <div className="grid grid-cols-7 gap-1 px-3 py-2.5">
           {dayDetails.map(({ date, weekdayInitial, dayNum, isToday }) => (
             <div
               key={date}
-              className={`w-[44px] h-[52px] rounded-lg flex flex-col items-center justify-center gap-[1px] shrink-0 ${
+              className={`w-full max-w-[44px] h-[52px] mx-auto rounded-lg flex flex-col items-center justify-center gap-[1px] ${
                 isToday
                   ? "bg-highlight-solid text-[#15181D]"
                   : "text-foreground"
@@ -232,7 +240,7 @@ export function WeekSheet({
                 </div>
               </div>
 
-              <div className="flex gap-1 mt-3 overflow-x-auto justify-between sm:justify-start">
+              <div className="grid grid-cols-7 gap-1 mt-3">
                 {dayDetails.map(({ date, weekdayLong, dayNum }) => {
                   const state = getCellState(habit, date)
                   const isPending = pendingKeys.has(`${habit.id}:${date}`)
@@ -248,7 +256,7 @@ export function WeekSheet({
                   return (
                     <div
                       key={date}
-                      className="w-[44px] h-[44px] flex items-center justify-center shrink-0"
+                      className="w-full max-w-[44px] aspect-square mx-auto flex items-center justify-center"
                     >
                       <WeekCell
                         state={state}

@@ -41,7 +41,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
   return (
     <form action={formAction}>
-      <div className="p-6 md:p-8 border-t border-border grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
+      <div className="p-4 sm:p-6 md:p-8 border-t border-border grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
         <div>
           <h2 className="text-[17px] font-semibold text-foreground">
             Details
@@ -108,7 +108,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         </div>
       </div>
 
-      <div className="p-6 md:p-8 border-t border-border grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
+      <div className="p-4 sm:p-6 md:p-8 border-t border-border grid md:grid-cols-[260px_1fr] gap-6 md:gap-8">
         <div>
           <h2 className="text-[17px] font-semibold text-foreground">
             Time zone

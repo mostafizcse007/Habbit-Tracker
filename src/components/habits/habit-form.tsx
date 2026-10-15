@@ -3,7 +3,17 @@
 import { useActionState, useEffect, useState } from "react"
 import type { Habit } from "@/types"
 import { createHabit, updateHabit } from "@/app/(app)/habits/actions"
+import { HABIT_TEMPLATES } from "@/lib/habit-templates"
 import { cn } from "@/lib/utils"
+
+const IDEA_CHIPS = [
+  { key: "water", label: "Water" },
+  { key: "workout", label: "Workout" },
+  { key: "read", label: "Read" },
+  { key: "journal", label: "Journal" },
+  { key: "study", label: "Study" },
+  { key: "coding", label: "Coding" },
+]
 
 const PRESET_COLORS = [
   "#ef4444",
@@ -35,6 +45,7 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
   const action = habit ? updateHabit : createHabit
   const [state, formAction, isPending] = useActionState(action, null)
 
+  const [name, setName] = useState<string>(habit?.name ?? "")
   const [selectedColor, setSelectedColor] = useState<string>(
     habit?.color ?? PRESET_COLORS[0]
   )
@@ -54,6 +65,14 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
     )
   }
 
+  const selectIdea = (key: string) => {
+    const t = HABIT_TEMPLATES.find((tpl) => tpl.key === key)
+    if (!t) return
+    setName(t.name)
+    setSelectedColor(t.color.toLowerCase())
+    setSelectedDays(t.frequency)
+  }
+
   return (
     <form action={formAction} className="space-y-5 mt-4">
       {habit && <input type="hidden" name="id" value={habit.id} />}
@@ -62,6 +81,26 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
         <p role="alert" className="text-[14px] text-destructive">
           {state.error}
         </p>
+      )}
+
+      {!habit && (
+        <div className="space-y-2">
+          <span className="text-[13px] text-muted-foreground block">
+            Or start from an idea
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {IDEA_CHIPS.map((chip) => (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => selectIdea(chip.key)}
+                className="h-8 px-3 rounded-full border border-input text-[13px] font-medium text-foreground hover:bg-muted transition-colors cursor-pointer select-none"
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="space-y-2">
@@ -74,7 +113,8 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
         <input
           id="habit-name"
           name="name"
-          defaultValue={habit?.name ?? ""}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Read 20 pages"
           maxLength={80}
           required
