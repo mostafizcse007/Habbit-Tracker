@@ -1,8 +1,12 @@
+"use client"
+
 import Link from "next/link"
+import { Flame } from "lucide-react"
 import type { Habit } from "@/types"
 import { parseLocalDateString } from "@/lib/dates"
 import { formatSchedule } from "@/lib/habit-schedule"
 import { WeekCell, type CellState } from "./week-cell"
+import { StreakNumber } from "./streak-number"
 import { cn } from "@/lib/utils"
 
 interface WeekSheetProps {
@@ -15,6 +19,7 @@ interface WeekSheetProps {
   getCellState: (habit: Habit, date: string) => CellState
   onToggleCell: (habit: Habit, date: string) => void
   className?: string
+  isRecent?: (key: string) => boolean
 }
 
 export function WeekSheet({
@@ -26,7 +31,10 @@ export function WeekSheet({
   getCellState,
   onToggleCell,
   className,
+  isRecent,
 }: WeekSheetProps) {
+
+
   const dayDetails = days.map((date) => {
     const d = parseLocalDateString(date)
     const weekdayShort = d.toLocaleDateString("en-US", { weekday: "short" })
@@ -89,14 +97,15 @@ export function WeekSheet({
           </div>
         </div>
 
-        {habits.map((habit) => {
+        {habits.map((habit, index) => {
           const streak = streaksByHabit[habit.id] ?? 0
           const scheduleText = formatSchedule(habit.frequency)
 
           return (
             <div
               key={habit.id}
-              className="grid grid-cols-[minmax(0,1fr)_repeat(7,56px)_96px] lg:grid-cols-[minmax(0,1fr)_repeat(7,64px)_112px] min-h-[76px] border-t border-border items-stretch"
+              style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+              className="anim-reveal grid grid-cols-[minmax(0,1fr)_repeat(7,56px)_96px] lg:grid-cols-[minmax(0,1fr)_repeat(7,64px)_112px] min-h-[76px] border-t border-border items-stretch"
             >
               <div className="pl-6 pr-4 flex items-center gap-[14px] min-w-0">
                 <span
@@ -140,6 +149,9 @@ export function WeekSheet({
                       size="desktop"
                       label={label}
                       pending={isPending}
+                      justChecked={
+                        isRecent ? isRecent(`${habit.id}:${date}`) : false
+                      }
                       onToggle={() => onToggleCell(habit, date)}
                     />
                   </div>
@@ -147,11 +159,19 @@ export function WeekSheet({
               })}
 
               <div className="pr-6 flex items-baseline justify-end gap-[6px] self-center">
+                {streak >= 7 && (
+                  <Flame
+                    className="size-4 text-foreground shrink-0 self-center"
+                    strokeWidth={2}
+                    aria-hidden="true"
+                  />
+                )}
                 {streak > 0 ? (
                   <>
-                    <span className="text-[26px] font-bold tracking-[-0.03em] text-foreground tabular-nums">
-                      {streak}
-                    </span>
+                    <StreakNumber
+                      value={streak}
+                      className="text-[26px] font-bold tracking-[-0.03em] text-foreground tabular-nums"
+                    />
                     <span className="text-[13px] text-muted-foreground">
                       {streak === 1 ? "day" : "days"}
                     </span>
@@ -200,13 +220,14 @@ export function WeekSheet({
           ))}
         </div>
 
-        {habits.map((habit) => {
+        {habits.map((habit, index) => {
           const streak = streaksByHabit[habit.id] ?? 0
 
           return (
             <div
               key={habit.id}
-              className="px-3 pt-3.5 pb-4 border-t border-border"
+              style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
+              className="anim-reveal px-3 pt-3.5 pb-4 border-t border-border"
             >
               <div className="flex items-center justify-between gap-3 px-1">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -222,12 +243,20 @@ export function WeekSheet({
                   </Link>
                 </div>
 
-                <div className="shrink-0 flex items-baseline">
+                <div className="shrink-0 flex items-baseline gap-1.5">
+                  {streak >= 7 && (
+                    <Flame
+                      className="size-4 text-foreground shrink-0 self-center"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                  )}
                   {streak > 0 ? (
                     <>
-                      <span className="text-[20px] font-bold text-foreground tabular-nums">
-                        {streak}
-                      </span>
+                      <StreakNumber
+                        value={streak}
+                        className="text-[20px] font-bold text-foreground tabular-nums"
+                      />
                       <span className="text-[12px] text-muted-foreground ml-1.5">
                         {streak === 1 ? "day" : "days"}
                       </span>
@@ -264,6 +293,9 @@ export function WeekSheet({
                         size="mobile"
                         label={label}
                         pending={isPending}
+                        justChecked={
+                          isRecent ? isRecent(`${habit.id}:${date}`) : false
+                        }
                         onToggle={() => onToggleCell(habit, date)}
                       />
                     </div>

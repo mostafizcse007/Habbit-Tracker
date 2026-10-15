@@ -33,10 +33,11 @@ interface HabitListProps {
 
 interface SortableHabitRowProps {
   habit: Habit
+  index: number
   isFirst: boolean
 }
 
-function SortableHabitRow({ habit, isFirst }: SortableHabitRowProps) {
+function SortableHabitRow({ habit, index, isFirst }: SortableHabitRowProps) {
   const {
     attributes,
     listeners,
@@ -51,7 +52,8 @@ function SortableHabitRow({ habit, isFirst }: SortableHabitRowProps) {
       ? `translate3d(0px, ${Math.round(transform.y)}px, 0px)`
       : undefined,
     transition,
-  }
+    "--i": Math.min(index, 8),
+  } as React.CSSProperties
 
   const scheduleText = formatSchedule(habit.frequency)
 
@@ -60,7 +62,7 @@ function SortableHabitRow({ habit, isFirst }: SortableHabitRowProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "min-h-[72px] px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-[14px]",
+        "anim-reveal min-h-[72px] px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-[14px]",
         isFirst ? "" : "border-t border-border",
         isDragging && "relative z-10 bg-card border-y border-foreground shadow-none"
       )}
@@ -199,6 +201,7 @@ export function HabitList({ habits }: HabitListProps) {
                 <SortableHabitRow
                   key={habit.id}
                   habit={habit}
+                  index={index}
                   isFirst={index === 0}
                 />
               ))}

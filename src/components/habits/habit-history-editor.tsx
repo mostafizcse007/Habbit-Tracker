@@ -21,6 +21,7 @@ interface HabitHistoryEditorProps {
   today: string
   pending: Set<string>
   onToggle: (date: string) => void
+  isRecent?: (key: string) => boolean
 }
 
 const WEEKDAYS = [
@@ -48,6 +49,7 @@ export function HabitHistoryEditor({
   today,
   pending,
   onToggle,
+  isRecent,
 }: HabitHistoryEditorProps) {
   const todayDate = parseLocalDateString(today)
   const currentYear = todayDate.getFullYear()
@@ -208,7 +210,10 @@ export function HabitHistoryEditor({
                       isToday &&
                         "ring-2 ring-foreground ring-offset-2 ring-offset-card",
                       isPending && "opacity-60",
-                      !isFuture && !isPending && "cursor-pointer"
+                      !isFuture && !isPending && "cursor-pointer",
+                      isLogged &&
+                        isRecent?.(`${habit.id}:${date}`) &&
+                        "anim-cell-pop"
                     )}
                   >
                     {dayNum}

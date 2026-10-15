@@ -9,6 +9,7 @@ interface WeekCellProps {
   label: string
   pending?: boolean
   onToggle?: () => void
+  justChecked?: boolean
 }
 
 export function WeekCell({
@@ -18,6 +19,7 @@ export function WeekCell({
   label,
   pending = false,
   onToggle,
+  justChecked = false,
 }: WeekCellProps) {
   if (state === "off") {
     return (
@@ -32,6 +34,7 @@ export function WeekCell({
   const isDone = state === "done"
   const isMissed = state === "missed"
   const isOpen = state === "open"
+  const shouldAnimate = justChecked && isDone
 
   return (
     <button
@@ -49,7 +52,8 @@ export function WeekCell({
           ? "w-full max-w-[44px] aspect-square"
           : "size-[40px] shrink-0",
         isMissed && "border-[1.5px] border-line-strong bg-transparent hover:border-foreground",
-        isOpen && "border-2 border-foreground bg-card"
+        isOpen && "border-2 border-foreground bg-card",
+        shouldAnimate && "anim-cell-pop"
       )}
       style={isDone ? { backgroundColor: color } : undefined}
     >
@@ -64,7 +68,11 @@ export function WeekCell({
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <path d="M4.5 10.5l3.5 3.5 7.5-8" />
+          <path
+            d="M4.5 10.5l3.5 3.5 7.5-8"
+            pathLength={shouldAnimate ? 1 : undefined}
+            className={shouldAnimate ? "anim-check-draw" : undefined}
+          />
         </svg>
       )}
     </button>

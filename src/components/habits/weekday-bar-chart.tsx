@@ -9,6 +9,8 @@ interface WeekdayBarChartProps {
   caption: string
   daysLabel?: string
   isScheduled?: (weekday: number) => boolean
+  className?: string
+  style?: React.CSSProperties
 }
 
 const WEEKDAY_DATA: Record<
@@ -30,11 +32,19 @@ export function WeekdayBarChart({
   caption,
   daysLabel = "Last 90 days",
   isScheduled,
+  className,
+  style,
 }: WeekdayBarChartProps) {
   const { best } = getBestAndWorstWeekday(rates, 3)
 
   return (
-    <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-4 sm:p-6">
+    <div
+      style={style}
+      className={cn(
+        "mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-4 sm:p-6",
+        className
+      )}
+    >
       <div className="flex items-center justify-between">
         <h2 className="text-[17px] font-semibold text-foreground">By weekday</h2>
         <span className="text-[14px] text-muted-foreground">{daysLabel}</span>
@@ -80,7 +90,7 @@ export function WeekdayBarChart({
                 {scheduled && item.rate !== null && (
                   <div
                     className={cn(
-                      "w-full motion-safe:transition-[height] duration-300 rounded-[4px]",
+                      "anim-grow-y w-full motion-safe:transition-[height] duration-300 rounded-[4px]",
                       color.startsWith("bg-") && color
                     )}
                     style={{

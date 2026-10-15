@@ -12,6 +12,8 @@ import { formatSchedule } from "@/lib/habit-schedule"
 import { calculateStreaks } from "@/lib/streaks"
 import { WeekCell, type CellState } from "@/components/habits/week-cell"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useJustChanged } from "@/hooks/use-just-changed"
+
 
 interface SampleHabitConfig {
   id: string
@@ -143,12 +145,20 @@ function ActiveDemoSheet() {
     return "open"
   }
 
+  const { mark, isRecent } = useJustChanged()
+
   function handleToggle(habitId: string, date: string) {
+    const key = `${habitId}:${date}`
+    const current = logsByHabit[habitId] ?? []
+    const isTurningOn = !current.includes(date)
+    if (isTurningOn) {
+      mark(key)
+    }
     setLogsByHabit((prev) => {
-      const current = prev[habitId] ?? []
-      const next = current.includes(date)
-        ? current.filter((d) => d !== date)
-        : [...current, date]
+      const logs = prev[habitId] ?? []
+      const next = logs.includes(date)
+        ? logs.filter((d) => d !== date)
+        : [...logs, date]
       return { ...prev, [habitId]: next }
     })
   }
@@ -241,6 +251,7 @@ function ActiveDemoSheet() {
                         color={habit.color}
                         size="desktop"
                         label={label}
+                        justChecked={isRecent(`${habit.id}:${date}`)}
                         onToggle={() => handleToggle(habit.id, date)}
                       />
                     </div>
@@ -361,6 +372,7 @@ function ActiveDemoSheet() {
                           color={habit.color}
                           size="mobile"
                           label={label}
+                          justChecked={isRecent(`${habit.id}:${date}`)}
                           onToggle={() => handleToggle(habit.id, date)}
                         />
                       </div>

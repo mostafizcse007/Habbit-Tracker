@@ -489,7 +489,10 @@ export function AnalyticsView({
         </div>
       </div>
 
-      <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
+      <div
+        style={{ "--i": 0 } as React.CSSProperties}
+        className="anim-reveal mt-8 bg-card border border-border rounded-[14px] overflow-hidden"
+      >
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
           <div className="bg-card p-4 sm:p-5 md:p-6">
             <div className="text-[36px] font-bold leading-none tracking-[-0.03em] tabular-nums text-foreground">
@@ -536,7 +539,10 @@ export function AnalyticsView({
         </div>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6">
+      <div
+        style={{ "--i": 1 } as React.CSSProperties}
+        className="anim-reveal mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6"
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <h2 className="text-[17px] font-semibold text-foreground">
             Weekly review
@@ -646,7 +652,10 @@ export function AnalyticsView({
         </div>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
+      <div
+        style={{ "--i": 2 } as React.CSSProperties}
+        className="anim-reveal mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden"
+      >
         <h2 className="text-[17px] font-semibold text-foreground">
           What stands out
         </h2>
@@ -665,7 +674,10 @@ export function AnalyticsView({
         </div>
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
+      <div
+        style={{ "--i": 3 } as React.CSSProperties}
+        className="anim-reveal mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden"
+      >
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-[17px] font-semibold text-foreground">
@@ -732,7 +744,10 @@ export function AnalyticsView({
         )}
       </div>
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
+      <div
+        style={{ "--i": 4 } as React.CSSProperties}
+        className="anim-reveal mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden"
+      >
         <div className="flex items-center justify-between">
           <h2 className="text-[17px] font-semibold text-foreground">
             By habit
@@ -776,7 +791,7 @@ export function AnalyticsView({
               <div className="h-2 rounded-full bg-muted flex-1 overflow-hidden">
                 {item.rate !== null && item.rate > 0 && (
                   <div
-                    className="h-full rounded-full transition-all duration-300"
+                    className="anim-grow-x h-full rounded-full transition-all duration-300"
                     style={{
                       width: `${item.rate}%`,
                       backgroundColor: item.color,
@@ -794,6 +809,8 @@ export function AnalyticsView({
       </div>
 
       <WeekdayBarChart
+        style={{ "--i": 5 } as React.CSSProperties}
+        className="anim-reveal"
         rates={weekdayTotals}
         color="var(--foreground)"
         caption={weekdayCaption}
@@ -803,7 +820,10 @@ export function AnalyticsView({
         }
       />
 
-      <div className="mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden">
+      <div
+        style={{ "--i": 6 } as React.CSSProperties}
+        className="anim-reveal mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden"
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <h2 className="text-[17px] font-semibold text-foreground">
             Consistency map

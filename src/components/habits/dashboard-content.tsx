@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -20,6 +20,8 @@ import { WeekSheet } from "@/components/habits/week-sheet"
 import { StarterHabits } from "@/components/habits/starter-habits"
 import type { CellState } from "@/components/habits/week-cell"
 import { useAchievementCheck } from "@/hooks/use-achievement-check"
+import { useJustChanged } from "@/hooks/use-just-changed"
+import { cn } from "@/lib/utils"
 
 interface DashboardContentProps {
   habits: Habit[]
@@ -61,10 +63,15 @@ export function cellState(
 
 export function DashboardContent({ habits }: DashboardContentProps) {
   const { scheduleCheck } = useAchievementCheck()
+  const { mark, isRecent } = useJustChanged()
   const [today, setToday] = useState<string>("")
   const [logsByHabit, setLogsByHabit] = useState<Record<string, string[]>>({})
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
+
+  const prevAllDoneRef = useRef<boolean | null>(null)
+  const [animatingMarker, setAnimatingMarker] = useState(false)
+  const markerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const loadLogs = async () => {
@@ -92,6 +99,14 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     loadLogs()
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (markerTimerRef.current) {
+        clearTimeout(markerTimerRef.current)
+      }
+    }
+  }, [])
+
   const toggleCell = async (habit: Habit, date: string) => {
     if (!today || date > today) {
       return
@@ -105,6 +120,10 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     const currentLogs = logsByHabit[habit.id] ?? []
     const isCompleted = currentLogs.includes(date)
     const nextCompleted = !isCompleted
+
+    if (nextCompleted) {
+      mark(key)
+    }
 
     setLogsByHabit((prev) => {
       const logs = prev[habit.id] ?? []
@@ -148,6 +167,46 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     }
   }
 
+  const dateObj = today ? parseLocalDateString(today) : new Date()
+  const weekdayShort = dateObj.toLocaleDateString("en-US", {
+    weekday: "short",
+  })
+  const dayNum = dateObj.getDate()
+  const monthShort = dateObj.toLocaleDateString("en-US", {
+    month: "short",
+  })
+  const dateHeadline = `${weekdayShort} ${dayNum} ${monthShort}`
+
+  const todayWeekday = getLocalWeekday(dateObj)
+  const scheduledTodayHabits = habits.filter((h) =>
+    h.frequency.includes(todayWeekday)
+  )
+  const totalToday = scheduledTodayHabits.length
+  const doneToday = scheduledTodayHabits.filter((h) =>
+    (logsByHabit[h.id] ?? []).includes(today)
+  ).length
+  const isAllDone = totalToday > 0 && doneToday === totalToday
+
+  useEffect(() => {
+    if (isLoading) return
+
+    if (prevAllDoneRef.current === null) {
+      prevAllDoneRef.current = isAllDone
+      return
+    }
+
+    if (!prevAllDoneRef.current && isAllDone) {
+      setAnimatingMarker(true)
+      if (markerTimerRef.current) clearTimeout(markerTimerRef.current)
+      markerTimerRef.current = setTimeout(() => {
+        setAnimatingMarker(false)
+        markerTimerRef.current = null
+      }, 700)
+    }
+
+    prevAllDoneRef.current = isAllDone
+  }, [isAllDone, isLoading])
+
   if (isLoading || !today) {
     return (
       <div className="pt-7 md:pt-14 space-y-6">
@@ -165,16 +224,6 @@ export function DashboardContent({ habits }: DashboardContentProps) {
       </div>
     )
   }
-
-  const dateObj = parseLocalDateString(today)
-  const weekdayShort = dateObj.toLocaleDateString("en-US", {
-    weekday: "short",
-  })
-  const dayNum = dateObj.getDate()
-  const monthShort = dateObj.toLocaleDateString("en-US", {
-    month: "short",
-  })
-  const dateHeadline = `${weekdayShort} ${dayNum} ${monthShort}`
 
   if (habits.length === 0) {
     return (
@@ -198,14 +247,6 @@ export function DashboardContent({ habits }: DashboardContentProps) {
   }
 
   const days = getLastNDates(7, today)
-  const todayWeekday = getLocalWeekday(dateObj)
-  const scheduledTodayHabits = habits.filter((h) =>
-    h.frequency.includes(todayWeekday)
-  )
-  const totalToday = scheduledTodayHabits.length
-  const doneToday = scheduledTodayHabits.filter((h) =>
-    (logsByHabit[h.id] ?? []).includes(today)
-  ).length
   const openTodayHabits = scheduledTodayHabits.filter(
     (h) => !(logsByHabit[h.id] ?? []).includes(today)
   )
@@ -260,8 +301,30 @@ export function DashboardContent({ habits }: DashboardContentProps) {
           <h1 className="text-[52px] md:text-[72px] font-bold leading-[0.95] tracking-[-0.045em] text-foreground">
             {dateHeadline}
           </h1>
-          <p className="mt-[14px] md:mt-[18px] text-[16px] md:text-[19px] leading-[1.4] text-text-soft max-w-[520px]">
-            {sentence}
+          <p
+            aria-live="polite"
+            className="mt-[14px] md:mt-[18px] text-[16px] md:text-[19px] leading-[1.4] text-text-soft max-w-[520px]"
+          >
+            {isAllDone ? (
+              <>
+                {doneToday} of {totalToday} done.{" "}
+                <span
+                  className={cn(animatingMarker && "anim-marker-swipe")}
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(transparent 58%, var(--marker) 58%, var(--marker) 92%, transparent 92%)",
+                    backgroundRepeat: "no-repeat",
+                    backgroundSize: "100% 100%",
+                    padding: "0 4px",
+                    margin: "0 -4px",
+                  }}
+                >
+                  Nothing left for today.
+                </span>
+              </>
+            ) : (
+              sentence
+            )}
           </p>
         </div>
 
@@ -295,6 +358,7 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         logsByHabit={logsByHabit}
         pendingKeys={pendingKeys}
         streaksByHabit={streaksByHabit}
+        isRecent={isRecent}
         getCellState={(habit, date) =>
           cellState(habit, date, today, logsByHabit[habit.id] ?? [])
         }

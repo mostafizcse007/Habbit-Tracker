@@ -26,6 +26,8 @@ import { HabitHistoryEditor } from "@/components/habits/habit-history-editor"
 import { WeekdayBars } from "@/components/habits/weekday-bars"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAchievementCheck } from "@/hooks/use-achievement-check"
+import { useJustChanged } from "@/hooks/use-just-changed"
+import { StreakNumber } from "@/components/habits/streak-number"
 import { cn } from "@/lib/utils"
 
 interface HabitDetailProps {
@@ -44,6 +46,7 @@ function formatSquareTitleDate(dateStr: string): string {
 export function HabitDetail({ habit }: HabitDetailProps) {
   const router = useRouter()
   const { scheduleCheck } = useAchievementCheck()
+  const { mark, isRecent } = useJustChanged()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [today, setToday] = useState<string>("")
   const [logs, setLogs] = useState<string[]>([])
@@ -87,6 +90,9 @@ export function HabitDetail({ habit }: HabitDetailProps) {
     }
 
     const next = !logs.includes(date)
+    if (next) {
+      mark(`${habit.id}:${date}`)
+    }
 
     setLogs((prev) => (next ? [...prev, date] : prev.filter((d) => d !== date)))
     setPendingDates((prev) => {
@@ -133,6 +139,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
     () => calculateStreaks(logs, habit.frequency, today),
     [logs, habit.frequency, today]
   )
+
   const rateStats = useMemo(
     () => calculateCompletionRate(logs, habit.frequency, createdOn, today, 30),
     [logs, habit.frequency, createdOn, today]
@@ -276,9 +283,10 @@ export function HabitDetail({ habit }: HabitDetailProps) {
             <div className="flex items-baseline gap-1.5">
               {streaks.current > 0 ? (
                 <>
-                  <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums">
-                    {streaks.current}
-                  </span>
+                  <StreakNumber
+                    value={streaks.current}
+                    className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums"
+                  />
                   <span className="text-[14px] text-muted-foreground">
                     {streaks.current === 1 ? "day" : "days"}
                   </span>
@@ -480,6 +488,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         today={today}
         pending={pendingDates}
         onToggle={toggleDate}
+        isRecent={isRecent}
       />
 
       <WeekdayBars

@@ -153,3 +153,112 @@
     scroll-behavior: smooth;
   }
 }
+
+@keyframes cell-pop {
+  0% {
+    transform: scale(0.7);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes streak-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes marker-swipe {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .anim-cell-pop {
+    animation: cell-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  .anim-check-draw {
+    stroke-dasharray: 1;
+    animation: check-draw 240ms ease-out 60ms both;
+  }
+  .anim-streak-in {
+    animation: streak-in 180ms ease-out both;
+  }
+  .anim-reveal {
+    animation: reveal-up 260ms ease-out both;
+    animation-delay: calc(var(--i, 0) * 40ms);
+  }
+  .anim-grow-x {
+    transform-origin: left;
+    animation: grow-x 500ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  }
+  .anim-grow-y {
+    transform-origin: bottom;
+    animation: grow-y 500ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  }
+  .anim-marker-swipe {
+    animation: marker-swipe 500ms ease-out both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

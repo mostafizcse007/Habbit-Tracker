@@ -186,7 +186,7 @@ export function AchievementsView({
           role="list"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
         >
-          {list.map((badge) => {
+          {list.map((badge, index) => {
             const Icon = ICONS[badge.icon]
             const isUnlocked = badge.isUnlocked
             const progress = !isUnlocked
@@ -197,13 +197,14 @@ export function AchievementsView({
               <div
                 key={badge.key}
                 role="listitem"
+                style={{ "--i": Math.min(index, 8) } as React.CSSProperties}
                 aria-label={
                   isUnlocked
                     ? `${badge.title}, unlocked`
                     : `${badge.title}, locked`
                 }
                 className={cn(
-                  "rounded-[10px] p-4 sm:p-5 flex gap-3.5 sm:gap-4 items-start",
+                  "anim-reveal rounded-[10px] p-4 sm:p-5 flex gap-3.5 sm:gap-4 items-start",
                   isUnlocked
                     ? "bg-highlight border border-transparent"
                     : "border border-dashed border-line-strong bg-transparent"
@@ -252,7 +253,7 @@ export function AchievementsView({
                         className="h-1.5 rounded-full bg-muted overflow-hidden mt-2"
                       >
                         <div
-                          className="h-full rounded-full bg-foreground transition-all duration-300"
+                          className="anim-grow-x h-full rounded-full bg-foreground transition-all duration-300"
                           style={{ width: `${progress.percent}%` }}
                         />
                       </div>
