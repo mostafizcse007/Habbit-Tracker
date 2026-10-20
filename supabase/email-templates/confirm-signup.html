@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm your Habit Tracker account</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <!-- Preview / Preheader text -->
+  <div style="display: none; max-height: 0px; overflow: hidden; opacity: 0; font-size: 1px; line-height: 1px; color: #fff;">
+    Activate your Habit Tracker account and start building consistency.
+  </div>
+
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f5f7; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04); overflow: hidden;">
+          
+          <!-- Brand Header -->
+          <tr>
+            <td style="padding: 32px 36px 24px 36px; border-bottom: 1px solid #f3f4f6;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background-color: #111827; border-radius: 8px; width: 32px; height: 32px; text-align: center; vertical-align: middle;">
+                    <!-- Checkmark icon -->
+                    <span style="color: #ffffff; font-weight: bold; font-size: 16px; line-height: 32px; display: inline-block;">✓</span>
+                  </td>
+                  <td style="padding-left: 12px; font-size: 17px; font-weight: 700; color: #111827; letter-spacing: -0.02em;">
+                    Habit Tracker
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content Body -->
+          <tr>
+            <td style="padding: 36px 36px 28px 36px;">
+              <h1 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #111827; line-height: 1.25; letter-spacing: -0.02em;">
+                Confirm your email address
+              </h1>
+              
+              <p style="margin: 0 0 20px 0; font-size: 15px; color: #4b5563; line-height: 1.6;">
+                Welcome to <strong>Habit Tracker</strong>! To complete your registration and begin tracking your daily consistency, please confirm that this is your email address.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 28px 0;">
+                <tr>
+                  <td align="center" style="border-radius: 10px; background-color: #111827;">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" style="display: inline-block; padding: 14px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 10px; background-color: #111827;">
+                      Verify Email Address &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #6b7280; line-height: 1.5;">
+                Or copy and paste this URL into your browser:
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 12px; color: #9ca3af; word-break: break-all; line-height: 1.4;">
+                <a href="{{ .ConfirmationURL }}" style="color: #4f46e5; text-decoration: underline;">{{ .ConfirmationURL }}</a>
+              </p>
+
+              <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 24px 0;">
+
+              <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+                If you did not sign up for Habit Tracker, you can safely ignore this email. This link will expire in 24 hours.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 36px; background-color: #fafafa; border-top: 1px solid #f3f4f6; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                &copy; 2026 Habit Tracker &bull; Track daily habits, build lifelong consistency.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

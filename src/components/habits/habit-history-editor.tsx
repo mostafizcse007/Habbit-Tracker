@@ -115,7 +115,7 @@ export function HabitHistoryEditor({
             onClick={handlePrev}
             disabled={isPrevDisabled}
             aria-label="Previous month"
-            className="size-[36px] rounded-lg border border-input flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="size-[36px] rounded-lg border border-input flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 md:after:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -127,7 +127,7 @@ export function HabitHistoryEditor({
             onClick={handleNext}
             disabled={isNextDisabled}
             aria-label="Next month"
-            className="size-[36px] rounded-lg border border-input flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="size-[36px] rounded-lg border border-input flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 md:after:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <ChevronRight className="size-4" />
           </button>
@@ -205,7 +205,7 @@ export function HabitHistoryEditor({
                     onClick={() => onToggle(date)}
                     style={stateStyle}
                     className={cn(
-                      "w-full max-w-[44px] md:max-w-[48px] aspect-square mx-auto rounded-lg text-[15px] tabular-nums flex items-center justify-center select-none motion-safe:transition-colors motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      "w-full max-w-[44px] md:max-w-[48px] aspect-square mx-auto rounded-lg text-[15px] tabular-nums flex items-center justify-center select-none touch-manipulation motion-safe:transition-colors motion-safe:active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       stateClass,
                       isToday &&
                         "ring-2 ring-foreground ring-offset-2 ring-offset-card",

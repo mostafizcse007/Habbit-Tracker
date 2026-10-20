@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { TryDemoButton } from "./try-demo-button"
 
 export function FinalCta() {
   return (
@@ -13,12 +14,15 @@ export function FinalCta() {
         </p>
       </div>
 
-      <Link
-        href="/signup"
-        className="inline-flex items-center justify-center h-[52px] px-7 rounded-[10px] text-[16px] font-semibold shrink-0 bg-[#F3F4F1] text-[#15181D] hover:opacity-90 dark:bg-primary dark:text-primary-foreground transition-opacity"
-      >
-        Create your account
-      </Link>
+      <div className="flex flex-col items-center sm:items-start gap-2.5 shrink-0">
+        <Link
+          href="/signup"
+          className="inline-flex items-center justify-center h-[52px] px-7 rounded-[10px] text-[16px] font-semibold bg-[#F3F4F1] text-[#15181D] hover:opacity-90 dark:bg-primary dark:text-primary-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          Create your account
+        </Link>
+        <TryDemoButton variant="link" />
+      </div>
     </section>
   )
 }

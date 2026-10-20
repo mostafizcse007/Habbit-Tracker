@@ -54,7 +54,11 @@ export function WeekdayBarChart({
         {caption}
       </p>
 
-      <div className="flex gap-2 sm:gap-3 mt-6 items-end justify-between sm:justify-start">
+      <div
+        role="img"
+        aria-label={`Weekday completion rates: ${caption}`}
+        className="flex gap-2 sm:gap-3 mt-6 items-end justify-between sm:justify-start"
+      >
         {rates.map((item) => {
           const scheduled = isScheduled
             ? isScheduled(item.weekday)

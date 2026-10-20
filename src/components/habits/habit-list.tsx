@@ -72,7 +72,7 @@ function SortableHabitRow({ habit, index, isFirst }: SortableHabitRowProps) {
           type="button"
           aria-label={`Reorder ${habit.name}`}
           className={cn(
-            "size-[44px] md:size-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0 rounded-lg select-none",
+            "size-[44px] md:size-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0 rounded-lg select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             isDragging ? "cursor-grabbing" : "cursor-grab"
           )}
           style={{ touchAction: "none" }}
@@ -87,10 +87,16 @@ function SortableHabitRow({ habit, index, isFirst }: SortableHabitRowProps) {
           style={{ backgroundColor: habit.color }}
         />
         <div className="min-w-0 flex-1">
-          <div className="text-[17px] font-semibold text-foreground truncate">
-            <Link href={`/habits/${habit.id}`} className="hover:underline">
+          <div className="flex items-center gap-2 min-w-0">
+            <Link href={`/habits/${habit.id}`} className="text-[17px] font-semibold text-foreground truncate hover:underline">
               {habit.name}
             </Link>
+            {habit.tags && habit.tags.length > 0 && (
+              <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
+                {habit.tags[0]}
+                {habit.tags.length > 1 && ` +${habit.tags.length - 1}`}
+              </span>
+            )}
           </div>
           <div className="text-[13px] text-muted-foreground mt-0.5 truncate">
             {scheduleText}

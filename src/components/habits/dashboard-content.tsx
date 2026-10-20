@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useMemo, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -12,15 +12,19 @@ import {
 import { calculateStreaks, calculateCompletionRate } from "@/lib/streaks"
 import { createClient } from "@/lib/supabase/client"
 import { fetchAllLogs } from "@/lib/logs"
-import { toggleHabitLog } from "@/app/(app)/dashboard/actions"
+import { toggleHabitLog, saveHabitNote } from "@/app/(app)/dashboard/actions"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { HabitDialog } from "@/components/habits/habit-dialog"
 import { WeekSheet } from "@/components/habits/week-sheet"
 import { StarterHabits } from "@/components/habits/starter-habits"
+import { SmartNudgeCard } from "@/components/habits/smart-nudge-card"
+import { HabitNoteDialog } from "@/components/habits/habit-note-dialog"
+import { computeSmartNudges } from "@/lib/nudges"
 import type { CellState } from "@/components/habits/week-cell"
 import { useAchievementCheck } from "@/hooks/use-achievement-check"
 import { useJustChanged } from "@/hooks/use-just-changed"
+import { tapHaptic } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
 
 interface DashboardContentProps {
@@ -66,7 +70,22 @@ export function DashboardContent({ habits }: DashboardContentProps) {
   const { mark, isRecent } = useJustChanged()
   const [today, setToday] = useState<string>("")
   const [logsByHabit, setLogsByHabit] = useState<Record<string, string[]>>({})
+  const [notesByHabitDate, setNotesByHabitDate] = useState<Record<string, string>>({})
+  const [activeNoteTarget, setActiveNoteTarget] = useState<{
+    habit: Habit
+    date: string
+  } | null>(null)
+  const [dismissedNudgeIds, setDismissedNudgeIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set()
+    try {
+      const saved = localStorage.getItem("dismissed_nudges")
+      return saved ? new Set(JSON.parse(saved)) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set())
+  const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   const prevAllDoneRef = useRef<boolean | null>(null)
@@ -83,13 +102,18 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         toast.error("Failed to load habit history")
       } else if (data) {
         const grouped: Record<string, string[]> = {}
+        const notesMap: Record<string, string> = {}
         for (const log of data) {
           if (!grouped[log.habit_id]) {
             grouped[log.habit_id] = []
           }
           grouped[log.habit_id].push(log.completed_on)
+          if (log.note) {
+            notesMap[`${log.habit_id}:${log.completed_on}`] = log.note
+          }
         }
         setLogsByHabit(grouped)
+        setNotesByHabitDate(notesMap)
       }
 
       setToday(todayDate)
@@ -123,6 +147,7 @@ export function DashboardContent({ habits }: DashboardContentProps) {
 
     if (nextCompleted) {
       mark(key)
+      tapHaptic()
     }
 
     setLogsByHabit((prev) => {
@@ -167,6 +192,73 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     }
   }
 
+  const handleSaveNote = async (
+    habitId: string,
+    date: string,
+    note: string | null
+  ) => {
+    const key = `${habitId}:${date}`
+    const previousNote = notesByHabitDate[key]
+    const previousLogs = logsByHabit[habitId] ?? []
+
+    setNotesByHabitDate((prev) => {
+      const next = { ...prev }
+      if (note) next[key] = note
+      else delete next[key]
+      return next
+    })
+
+    if (note && !previousLogs.includes(date)) {
+      setLogsByHabit((prev) => ({
+        ...prev,
+        [habitId]: [...(prev[habitId] ?? []), date],
+      }))
+    }
+
+    try {
+      const result = await saveHabitNote(habitId, date, note)
+      if (result && "error" in result) {
+        setNotesByHabitDate((prev) => {
+          const next = { ...prev }
+          if (previousNote) next[key] = previousNote
+          else delete next[key]
+          return next
+        })
+        setLogsByHabit((prev) => ({
+          ...prev,
+          [habitId]: previousLogs,
+        }))
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      setNotesByHabitDate((prev) => {
+        const next = { ...prev }
+        if (previousNote) next[key] = previousNote
+        else delete next[key]
+        return next
+      })
+      setLogsByHabit((prev) => ({
+        ...prev,
+        [habitId]: previousLogs,
+      }))
+      throw err
+    }
+  }
+
+  const handleDismissNudge = (id: string) => {
+    setDismissedNudgeIds((prev) => {
+      const next = new Set(prev)
+      next.add(id)
+      try {
+        localStorage.setItem(
+          "dismissed_nudges",
+          JSON.stringify(Array.from(next))
+        )
+      } catch {}
+      return next
+    })
+  }
+
   const dateObj = today ? parseLocalDateString(today) : new Date()
   const weekdayShort = dateObj.toLocaleDateString("en-US", {
     weekday: "short",
@@ -206,6 +298,37 @@ export function DashboardContent({ habits }: DashboardContentProps) {
 
     prevAllDoneRef.current = isAllDone
   }, [isAllDone, isLoading])
+
+  const streaksByHabit = useMemo(() => {
+    if (!today) return {}
+    const map: Record<string, number> = {}
+    for (const habit of habits) {
+      const logs = logsByHabit[habit.id] ?? []
+      const streaks = calculateStreaks(logs, habit.frequency, today)
+      map[habit.id] = streaks.current
+    }
+    return map
+  }, [habits, logsByHabit, today])
+
+  const allTags = useMemo(() => {
+    return Array.from(new Set(habits.flatMap((h) => h.tags ?? [])))
+  }, [habits])
+
+  const habitsToRender = useMemo(() => {
+    if (!selectedTag) return habits
+    return habits.filter((h) => h.tags?.includes(selectedTag))
+  }, [habits, selectedTag])
+
+  const topNudge = useMemo(() => {
+    if (!today || habits.length === 0) return null
+    const list = computeSmartNudges({
+      habits,
+      logsByHabit,
+      streaksByHabit,
+      today,
+    })
+    return list.find((n) => !dismissedNudgeIds.has(n.id)) ?? null
+  }, [habits, logsByHabit, streaksByHabit, today, dismissedNudgeIds])
 
   if (isLoading || !today) {
     return (
@@ -265,15 +388,13 @@ export function DashboardContent({ habits }: DashboardContentProps) {
   let totalCompletedWeek = 0
   let bestCurrentStreak = 0
   let bestStreakHabitName = ""
-  const streaksByHabit: Record<string, number> = {}
 
   for (const habit of habits) {
     const logs = logsByHabit[habit.id] ?? []
-    const streaks = calculateStreaks(logs, habit.frequency, today)
-    streaksByHabit[habit.id] = streaks.current
+    const currentStreak = streaksByHabit[habit.id] ?? 0
 
-    if (streaks.current > bestCurrentStreak) {
-      bestCurrentStreak = streaks.current
+    if (currentStreak > bestCurrentStreak) {
+      bestCurrentStreak = currentStreak
       bestStreakHabitName = habit.name
     }
 
@@ -337,6 +458,51 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         />
       </div>
 
+      {topNudge && (
+        <div className="mt-8">
+          <SmartNudgeCard
+            nudge={topNudge}
+            onDismiss={handleDismissNudge}
+          />
+        </div>
+      )}
+
+      {allTags.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedTag(null)}
+            className={cn(
+              "h-8 px-3.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer",
+              selectedTag === null
+                ? "bg-foreground text-background font-semibold"
+                : "border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted"
+            )}
+          >
+            All ({habits.length})
+          </button>
+          {allTags.map((tag) => {
+            const count = habits.filter((h) => h.tags?.includes(tag)).length
+            const isSelected = selectedTag === tag
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setSelectedTag(isSelected ? null : tag)}
+                className={cn(
+                  "h-8 px-3.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer",
+                  isSelected
+                    ? "bg-foreground text-background font-semibold"
+                    : "border border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {tag} ({count})
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {Object.values(logsByHabit).every((logs) => logs.length === 0) && (
         <div
           role="status"
@@ -350,12 +516,15 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         className={
           Object.values(logsByHabit).every((logs) => logs.length === 0)
             ? "mt-4"
-            : undefined
+            : allTags.length > 0
+              ? "mt-4"
+              : undefined
         }
-        habits={habits}
+        habits={habitsToRender}
         days={days}
         today={today}
         logsByHabit={logsByHabit}
+        notesByHabitDate={notesByHabitDate}
         pendingKeys={pendingKeys}
         streaksByHabit={streaksByHabit}
         isRecent={isRecent}
@@ -363,6 +532,7 @@ export function DashboardContent({ habits }: DashboardContentProps) {
           cellState(habit, date, today, logsByHabit[habit.id] ?? [])
         }
         onToggleCell={toggleCell}
+        onOpenNote={(habit, date) => setActiveNoteTarget({ habit, date })}
       />
 
       <p className="mt-4 md:mt-5 text-[13px] md:text-[14px] text-muted-foreground">
@@ -379,6 +549,23 @@ export function DashboardContent({ habits }: DashboardContentProps) {
               bestCurrentStreak === 1 ? "day" : "days"
             }.`}
         </p>
+      )}
+
+      {activeNoteTarget && (
+        <HabitNoteDialog
+          open={Boolean(activeNoteTarget)}
+          onOpenChange={(open) => {
+            if (!open) setActiveNoteTarget(null)
+          }}
+          habit={activeNoteTarget.habit}
+          date={activeNoteTarget.date}
+          initialNote={
+            notesByHabitDate[
+              `${activeNoteTarget.habit.id}:${activeNoteTarget.date}`
+            ]
+          }
+          onSave={handleSaveNote}
+        />
       )}
     </div>
   )

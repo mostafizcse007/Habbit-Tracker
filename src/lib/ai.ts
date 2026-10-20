@@ -41,11 +41,11 @@ export async function generateText({
     throw new AiError("failed", "AI API key is missing")
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash"
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 25000)
+  const timeoutId = setTimeout(() => controller.abort(), 45000)
 
   let response: Response
   try {
@@ -62,11 +62,13 @@ export async function generateText({
       }),
       signal: controller.signal,
     })
-  } catch (err) {
+  } catch (err: unknown) {
     if (err instanceof AiError) {
       throw err
     }
-    throw new AiError("failed", "AI network request failed")
+    const isAbort = (err as { name?: string })?.name === "AbortError"
+    console.error(`AI network request failed (${isAbort ? "timeout" : "error"}):`, err)
+    throw new AiError("failed", isAbort ? "AI request timed out" : "AI network request failed")
   } finally {
     clearTimeout(timeoutId)
   }
@@ -76,13 +78,16 @@ export async function generateText({
   }
 
   if (!response.ok) {
+    const errorBody = await response.text().catch(() => "")
+    console.error(`AI generation failed (${response.status}):`, errorBody)
     throw new AiError("failed", `AI generation failed (${response.status})`)
   }
 
   let data: GeminiResponse
   try {
     data = (await response.json()) as GeminiResponse
-  } catch {
+  } catch (err) {
+    console.error("AI response parsing failed:", err)
     throw new AiError("failed", "AI response parsing failed")
   }
 
@@ -90,6 +95,7 @@ export async function generateText({
   const text = parts.map((part) => part.text ?? "").join("").trim()
 
   if (!text) {
+    console.error("AI returned empty content. Full response:", JSON.stringify(data))
     throw new AiError("failed", "AI returned empty content")
   }
 

@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { WeekdayBarChart } from "@/components/habits/weekday-bar-chart"
 import { cn } from "@/lib/utils"
 import { generateWeeklyReview } from "@/app/(app)/analytics/actions"
+import { leaveDemo } from "@/app/(auth)/actions"
 import { getReviewPeriod } from "@/lib/review"
 
 export interface WeeklyReviewData {
@@ -58,6 +59,7 @@ interface AnalyticsViewProps {
     end: string
   }
   initialReview?: WeeklyReviewData | null
+  isDemo?: boolean
 }
 
 const WEEKDAY_PLURALS: Record<number, string> = {
@@ -128,11 +130,13 @@ export function AnalyticsView({
   habits,
   period,
   initialReview,
+  isDemo = false,
 }: AnalyticsViewProps) {
   const [today, setToday] = useState<string>("")
   const [logsByHabit, setLogsByHabit] = useState<Record<string, string[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [range, setRange] = useState<7 | 30 | 90>(30)
+  const [breakdownView, setBreakdownView] = useState<"habit" | "tag">("habit")
 
   const [review, setReview] = useState<WeeklyReviewData | null>(
     initialReview ?? null
@@ -234,6 +238,43 @@ export function AnalyticsView({
     if (!today || !startDate) return []
     return calculateHabitBreakdown(habitInputs, logsByHabit, startDate, today)
   }, [habitInputs, logsByHabit, startDate, today])
+
+  const tagBreakdown = useMemo(() => {
+    if (!today || !startDate) return []
+    const tagMap = new Map<
+      string,
+      { scheduled: number; completed: number; habitCount: number }
+    >()
+    for (const habit of habits) {
+      const tags =
+        habit.tags && habit.tags.length > 0 ? habit.tags : ["Untagged"]
+      const item = habitBreakdown.find((b) => b.id === habit.id)
+      if (!item) continue
+      for (const tag of tags) {
+        const current = tagMap.get(tag) ?? {
+          scheduled: 0,
+          completed: 0,
+          habitCount: 0,
+        }
+        current.scheduled += item.scheduled
+        current.completed += item.completed
+        current.habitCount += 1
+        tagMap.set(tag, current)
+      }
+    }
+    return Array.from(tagMap.entries())
+      .map(([tag, data]) => ({
+        tag,
+        scheduled: data.scheduled,
+        completed: data.completed,
+        habitCount: data.habitCount,
+        rate:
+          data.scheduled > 0
+            ? Math.round((data.completed / data.scheduled) * 100)
+            : null,
+      }))
+      .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1))
+  }, [habits, habitBreakdown, startDate, today])
 
   const weekdayTotals = useMemo(() => {
     if (!today) return []
@@ -360,9 +401,22 @@ export function AnalyticsView({
     return labels
   }, [heatmapWeeks])
 
+  const consistencyStats = useMemo(() => {
+    let checkIns = 0
+    let activeDays = 0
+    for (const p of consistencyDailyMap.values()) {
+      if (p.completed > 0) {
+        checkIns += p.completed
+        activeDays++
+      }
+    }
+    return { checkIns, activeDays }
+  }, [consistencyDailyMap])
+
   if (isLoading || !today) {
     return (
       <div className="pt-7 md:pt-14 pb-14 md:pb-[72px] space-y-6">
+        <h1 className="sr-only">Analytics</h1>
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <Skeleton className="h-[44px] md:h-[56px] w-64" />
@@ -476,7 +530,7 @@ export function AnalyticsView({
                 onClick={() => setRange(r)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "h-9 px-3 rounded-lg text-[14px] font-semibold cursor-pointer transition-colors",
+                  "h-9 px-3 rounded-lg text-[14px] font-semibold cursor-pointer transition-colors relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 md:after:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                   isSelected
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -553,7 +607,23 @@ export function AnalyticsView({
         </div>
 
         <div className="mt-4">
-          {isGenerating ? (
+          {isDemo ? (
+            <div className="space-y-4">
+              <p className="text-[15px] text-text-soft">
+                Weekly reviews need a real account.
+              </p>
+              <div>
+                <form action={leaveDemo}>
+                  <button
+                    type="submit"
+                    className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer transition-colors hover:bg-primary/90"
+                  >
+                    Create your account
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : isGenerating ? (
             <div className="space-y-4">
               <div>
                 <button
@@ -603,7 +673,7 @@ export function AnalyticsView({
                       <button
                         type="button"
                         onClick={() => handleGenerateReview(true)}
-                        className="text-[14px] text-foreground hover:underline cursor-pointer"
+                        className="relative inline-flex items-center min-h-[44px] md:min-h-0 text-[14px] text-foreground hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
                         Regenerate
                       </button>
@@ -699,7 +769,7 @@ export function AnalyticsView({
         ) : (
           <div
             role="img"
-            aria-label={`Line chart of completion rate over the last ${range} days, averaging ${summary.rate ?? 0}%`}
+            aria-label={`Completion rate over the last ${range} days: averaging ${summary.rate ?? 0}%, with ${summary.completed} of ${summary.scheduled} check-ins completed`}
             className="w-full h-[220px] md:h-[260px] mt-6 min-w-0"
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -748,63 +818,151 @@ export function AnalyticsView({
         style={{ "--i": 4 } as React.CSSProperties}
         className="anim-reveal mt-6 bg-card border border-border rounded-[14px] p-4 sm:p-6 overflow-hidden"
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-[17px] font-semibold text-foreground">
-            By habit
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[17px] font-semibold text-foreground">
+              Breakdown
+            </h2>
+            <div className="flex items-center p-0.5 rounded-lg bg-muted text-[13px] font-medium">
+              <button
+                type="button"
+                onClick={() => setBreakdownView("habit")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-colors cursor-pointer",
+                  breakdownView === "habit"
+                    ? "bg-card text-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                By Habit
+              </button>
+              <button
+                type="button"
+                onClick={() => setBreakdownView("tag")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-colors cursor-pointer",
+                  breakdownView === "tag"
+                    ? "bg-card text-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                By Category
+              </button>
+            </div>
+          </div>
           <span className="text-[14px] text-muted-foreground">
             Last {range} days
           </span>
         </div>
 
         <div className="space-y-4 mt-4">
-          {habitBreakdown.map((item) => (
-            <div
-              key={item.id}
-              className="min-h-[44px] flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4"
-            >
-              <div className="flex items-center justify-between md:justify-start gap-3 min-w-0 md:w-[240px] shrink-0">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span
-                    className="size-[10px] rounded-[3px] shrink-0"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <div className="min-w-0">
-                    <div className="text-[16px] font-semibold text-foreground truncate">
-                      <Link
-                        href={`/habits/${item.id}`}
-                        className="hover:underline"
-                      >
-                        {item.name}
-                      </Link>
-                    </div>
-                    <div className="text-[13px] text-muted-foreground">
-                      {item.completed} of {item.scheduled} days
+          {breakdownView === "habit" ? (
+            habitBreakdown.map((item) => (
+              <div
+                key={item.id}
+                className="min-h-[44px] flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4"
+              >
+                <div className="flex items-center justify-between md:justify-start gap-3 min-w-0 md:w-[240px] shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className="size-[10px] rounded-[3px] shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <div className="min-w-0">
+                      <div className="text-[16px] font-semibold text-foreground truncate">
+                        <Link
+                          href={`/habits/${item.id}`}
+                          className="hover:underline"
+                        >
+                          {item.name}
+                        </Link>
+                      </div>
+                      <div className="text-[13px] text-muted-foreground">
+                        {item.completed} of {item.scheduled} days
+                      </div>
                     </div>
                   </div>
+                  <div className="md:hidden text-[15px] font-semibold tabular-nums text-foreground">
+                    {item.rate !== null ? `${item.rate}%` : "—"}
+                  </div>
                 </div>
-                <div className="md:hidden text-[15px] font-semibold tabular-nums text-foreground">
+
+                <div
+                  role="progressbar"
+                  aria-valuenow={item.rate ?? 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${item.name} completion rate: ${item.rate !== null ? `${item.rate}%` : "no scheduled days"}`}
+                  className="h-2 rounded-full bg-muted flex-1 overflow-hidden"
+                >
+                  {item.rate !== null && item.rate > 0 && (
+                    <div
+                      className="anim-grow-x h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${item.rate}%`,
+                        backgroundColor: item.color,
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="hidden md:block text-[15px] font-semibold tabular-nums text-foreground w-12 text-right">
                   {item.rate !== null ? `${item.rate}%` : "—"}
                 </div>
               </div>
-
-              <div className="h-2 rounded-full bg-muted flex-1 overflow-hidden">
-                {item.rate !== null && item.rate > 0 && (
-                  <div
-                    className="anim-grow-x h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${item.rate}%`,
-                      backgroundColor: item.color,
-                    }}
-                  />
-                )}
-              </div>
-
-              <div className="hidden md:block text-[15px] font-semibold tabular-nums text-foreground w-12 text-right">
-                {item.rate !== null ? `${item.rate}%` : "—"}
-              </div>
+            ))
+          ) : tagBreakdown.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground text-[14px]">
+              No habits with categories or tags yet.
             </div>
-          ))}
+          ) : (
+            tagBreakdown.map((item) => (
+              <div
+                key={item.tag}
+                className="min-h-[44px] flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4"
+              >
+                <div className="flex items-center justify-between md:justify-start gap-3 min-w-0 md:w-[240px] shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="size-2 rounded-full shrink-0 bg-primary" />
+                    <div className="min-w-0">
+                      <div className="text-[16px] font-semibold text-foreground truncate">
+                        {item.tag}
+                      </div>
+                      <div className="text-[13px] text-muted-foreground">
+                        {item.completed} of {item.scheduled} days • {item.habitCount}{" "}
+                        {item.habitCount === 1 ? "habit" : "habits"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="md:hidden text-[15px] font-semibold tabular-nums text-foreground">
+                    {item.rate !== null ? `${item.rate}%` : "—"}
+                  </div>
+                </div>
+
+                <div
+                  role="progressbar"
+                  aria-valuenow={item.rate ?? 0}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${item.tag} category completion rate: ${item.rate !== null ? `${item.rate}%` : "no scheduled days"}`}
+                  className="h-2 rounded-full bg-muted flex-1 overflow-hidden"
+                >
+                  {item.rate !== null && item.rate > 0 && (
+                    <div
+                      className="anim-grow-x h-full rounded-full bg-primary transition-all duration-300"
+                      style={{
+                        width: `${item.rate}%`,
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div className="hidden md:block text-[15px] font-semibold tabular-nums text-foreground w-12 text-right">
+                  {item.rate !== null ? `${item.rate}%` : "—"}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -842,7 +1000,7 @@ export function AnalyticsView({
         <div ref={mapScrollRef} className="overflow-x-auto pb-2 min-w-0 max-w-full">
           <div
             role="img"
-            aria-label="Consistency map for the last 12 months"
+            aria-label={`Consistency map for the last 12 months: ${consistencyStats.checkIns} check-ins across ${consistencyStats.activeDays} active days`}
             className="inline-flex gap-2 min-w-max"
           >
             <div className="flex flex-col">

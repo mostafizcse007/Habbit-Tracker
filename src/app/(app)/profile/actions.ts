@@ -1,9 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { isValidTimeZone } from "@/lib/timezone"
+import { isDemoUser } from "@/lib/demo"
 
 export type ProfileActionState = { error: string } | { success: true } | null
 
@@ -97,6 +99,10 @@ export async function updatePassword(
     return { error: "Not signed in" }
   }
 
+  if (isDemoUser(user)) {
+    return { error: "This is not available in demo accounts." }
+  }
+
   const rawPassword = formData.get("password")
   const rawConfirm = formData.get("confirm")
 
@@ -162,6 +168,10 @@ export async function updateAvatar(
     return { error: "Not signed in" }
   }
 
+  if (isDemoUser(user)) {
+    return { error: "This is not available in demo accounts." }
+  }
+
   if (path !== null) {
     const escapedId = user.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
     const regex = new RegExp(`^${escapedId}/[A-Za-z0-9-]+\\.(png|jpg|webp)$`)
@@ -195,5 +205,95 @@ export async function updateAvatar(
 
   revalidatePath("/", "layout")
   return { success: true }
+}
+
+export type DeleteAccountState = { error: string } | null
+
+export async function deleteAccount(
+  prevState: DeleteAccountState,
+  formData: FormData
+): Promise<DeleteAccountState> {
+  const confirmation = formData.get("confirmation")
+  if (
+    typeof confirmation !== "string" ||
+    confirmation.trim().toLowerCase() !== "delete my account"
+  ) {
+    return { error: 'Please type "delete my account" to confirm.' }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  if (isDemoUser(user)) {
+    return { error: "Demo accounts cannot be deleted." }
+  }
+
+  // 1. Remove avatar from storage if exists
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("avatar_path")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  if (profile?.avatar_path) {
+    try {
+      await supabase.storage.from("avatars").remove([profile.avatar_path])
+    } catch {}
+  }
+
+  // 2. Call RPC to delete from auth.users (cascades to all data)
+  const { error: rpcError } = await supabase.rpc("delete_user_account")
+
+  if (rpcError) {
+    return { error: rpcError.message || "Failed to delete account" }
+  }
+
+  // 3. Sign out
+  await supabase.auth.signOut()
+
+  redirect("/")
+}
+
+export async function exportUserData(): Promise<{
+  data?: {
+    profile: unknown
+    habits: unknown[]
+    logs: unknown[]
+    reviews: unknown[]
+    exported_at: string
+  }
+  error?: string
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const [profileRes, habitsRes, logsRes, reviewsRes] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+    supabase.from("habits").select("*").eq("user_id", user.id),
+    supabase.from("habit_logs").select("*").eq("user_id", user.id),
+    supabase.from("weekly_reviews").select("*").eq("user_id", user.id),
+  ])
+
+  return {
+    data: {
+      profile: profileRes.data,
+      habits: habitsRes.data ?? [],
+      logs: logsRes.data ?? [],
+      reviews: reviewsRes.data ?? [],
+      exported_at: new Date().toISOString(),
+    },
+  }
 }
 

@@ -43,10 +43,14 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  if (
-    !user &&
-    (pathname.startsWith("/dashboard") || pathname.startsWith("/habits"))
-  ) {
+  const isProtectedPath =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/habits") ||
+    pathname.startsWith("/analytics") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/achievements")
+
+  if (!user && isProtectedPath) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     const redirectResponse = NextResponse.redirect(url)
@@ -56,7 +60,12 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse
   }
 
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  const isAuthOnlyPath =
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password"
+
+  if (user && isAuthOnlyPath) {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     const redirectResponse = NextResponse.redirect(url)

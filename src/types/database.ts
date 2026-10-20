@@ -15,6 +15,7 @@ export type Database = {
           created_at: string
           habit_id: string
           id: string
+          note: string | null
           user_id: string
         }
         Insert: {
@@ -22,6 +23,7 @@ export type Database = {
           created_at?: string
           habit_id: string
           id?: string
+          note?: string | null
           user_id?: string
         }
         Update: {
@@ -29,6 +31,7 @@ export type Database = {
           created_at?: string
           habit_id?: string
           id?: string
+          note?: string | null
           user_id?: string
         }
         Relationships: []
@@ -42,6 +45,7 @@ export type Database = {
           id: string
           name: string
           sort_order: number
+          tags: string[]
           user_id: string
         }
         Insert: {
@@ -52,6 +56,7 @@ export type Database = {
           id?: string
           name: string
           sort_order?: number
+          tags?: string[]
           user_id?: string
         }
         Update: {
@@ -62,6 +67,7 @@ export type Database = {
           id?: string
           name?: string
           sort_order?: number
+          tags?: string[]
           user_id?: string
         }
         Relationships: []
@@ -143,10 +149,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_username_available: {
+        Args: {
+          check_username: string
+        }
+        Returns: boolean
+      }
+      delete_user_account: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
       reorder_habits: {
         Args: {
           habit_ids: string[]
         }
+        Returns: undefined
+      }
+      seed_demo_data: {
+        Args: Record<string, never>
         Returns: undefined
       }
     }

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { DemoSheet } from "./demo-sheet"
+import { TryDemoButton } from "./try-demo-button"
 
 export function Hero() {
   return (
@@ -22,23 +23,24 @@ export function Hero() {
         patterns, and get a short written review of your week.
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3">
         <Link
           href="/signup"
-          className="inline-flex items-center justify-center h-[52px] px-7 rounded-[10px] bg-primary text-primary-foreground text-[16px] font-semibold hover:opacity-90 transition-opacity"
+          className="w-full sm:w-auto inline-flex items-center justify-center h-[52px] px-7 rounded-[10px] bg-primary text-primary-foreground text-[16px] font-semibold hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Start tracking
         </Link>
+        <TryDemoButton />
         <a
           href="#how-it-works"
-          className="inline-flex items-center justify-center h-[52px] px-7 rounded-[10px] border border-input text-foreground text-[16px] font-semibold hover:bg-muted transition-colors"
+          className="text-center sm:text-left text-[15px] font-semibold hover:underline text-foreground sm:ml-2 min-h-[44px] inline-flex items-center justify-center sm:justify-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
         >
           See how it works
         </a>
       </div>
 
       <p className="mt-4 text-[14px] text-muted-foreground">
-        Free to use. Works in any browser, including your phone.
+        Free to use. The demo opens with sample data, no sign-up.
       </p>
 
       <div className="mt-10 md:mt-[56px]">

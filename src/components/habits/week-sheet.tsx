@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Flame } from "lucide-react"
+import { Flame, FileText } from "lucide-react"
 import type { Habit } from "@/types"
 import { parseLocalDateString } from "@/lib/dates"
 import { formatSchedule } from "@/lib/habit-schedule"
@@ -14,10 +14,12 @@ interface WeekSheetProps {
   days: string[]
   today: string
   logsByHabit: Record<string, string[]>
+  notesByHabitDate?: Record<string, string>
   pendingKeys: Set<string>
   streaksByHabit: Record<string, number>
   getCellState: (habit: Habit, date: string) => CellState
   onToggleCell: (habit: Habit, date: string) => void
+  onOpenNote?: (habit: Habit, date: string) => void
   className?: string
   isRecent?: (key: string) => boolean
 }
@@ -26,10 +28,12 @@ export function WeekSheet({
   habits,
   days,
   today,
+  notesByHabitDate,
   pendingKeys,
   streaksByHabit,
   getCellState,
   onToggleCell,
+  onOpenNote,
   className,
   isRecent,
 }: WeekSheetProps) {
@@ -113,10 +117,34 @@ export function WeekSheet({
                   style={{ backgroundColor: habit.color }}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[17px] font-semibold tracking-[-0.01em] text-foreground truncate">
-                    <Link href={`/habits/${habit.id}`} className="hover:underline">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Link
+                      href={`/habits/${habit.id}`}
+                      className="text-[17px] font-semibold tracking-[-0.01em] text-foreground truncate hover:underline"
+                    >
                       {habit.name}
                     </Link>
+                    {habit.tags && habit.tags.length > 0 && (
+                      <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
+                        {habit.tags[0]}
+                        {habit.tags.length > 1 && ` +${habit.tags.length - 1}`}
+                      </span>
+                    )}
+                    {onOpenNote && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenNote(habit, today)}
+                        className="opacity-60 hover:opacity-100 size-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shrink-0"
+                        title={
+                          notesByHabitDate?.[`${habit.id}:${today}`]
+                            ? `Note today: "${notesByHabitDate[`${habit.id}:${today}`]}"`
+                            : "Add a note for today"
+                        }
+                        aria-label={`Note for ${habit.name}`}
+                      >
+                        <FileText className="size-3.5" />
+                      </button>
+                    )}
                   </div>
                   <div className="text-[13px] text-muted-foreground mt-0.5 truncate">
                     {scheduleText}
@@ -127,6 +155,7 @@ export function WeekSheet({
               {dayDetails.map(({ date, weekdayLong, dayNum, isToday }) => {
                 const state = getCellState(habit, date)
                 const isPending = pendingKeys.has(`${habit.id}:${date}`)
+                const hasNote = Boolean(notesByHabitDate?.[`${habit.id}:${date}`])
                 let label = `${habit.name}, ${weekdayLong} ${dayNum}, not scheduled`
                 if (state === "done") {
                   label = `${habit.name}, ${weekdayLong} ${dayNum}, done`
@@ -149,6 +178,7 @@ export function WeekSheet({
                       size="desktop"
                       label={label}
                       pending={isPending}
+                      hasNote={hasNote}
                       justChecked={
                         isRecent ? isRecent(`${habit.id}:${date}`) : false
                       }
@@ -241,6 +271,26 @@ export function WeekSheet({
                   >
                     {habit.name}
                   </Link>
+                  {habit.tags && habit.tags.length > 0 && (
+                    <span className="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
+                      {habit.tags[0]}
+                    </span>
+                  )}
+                  {onOpenNote && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenNote(habit, today)}
+                      className="opacity-60 hover:opacity-100 size-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shrink-0"
+                      title={
+                        notesByHabitDate?.[`${habit.id}:${today}`]
+                          ? `Note today: "${notesByHabitDate[`${habit.id}:${today}`]}"`
+                          : "Add a note for today"
+                      }
+                      aria-label={`Note for ${habit.name}`}
+                    >
+                      <FileText className="size-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="shrink-0 flex items-baseline gap-1.5">
@@ -273,6 +323,7 @@ export function WeekSheet({
                 {dayDetails.map(({ date, weekdayLong, dayNum }) => {
                   const state = getCellState(habit, date)
                   const isPending = pendingKeys.has(`${habit.id}:${date}`)
+                  const hasNote = Boolean(notesByHabitDate?.[`${habit.id}:${date}`])
                   let label = `${habit.name}, ${weekdayLong} ${dayNum}, not scheduled`
                   if (state === "done") {
                     label = `${habit.name}, ${weekdayLong} ${dayNum}, done`
@@ -293,6 +344,7 @@ export function WeekSheet({
                         size="mobile"
                         label={label}
                         pending={isPending}
+                        hasNote={hasNote}
                         justChecked={
                           isRecent ? isRecent(`${habit.id}:${date}`) : false
                         }

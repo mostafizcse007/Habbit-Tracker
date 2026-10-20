@@ -14,7 +14,13 @@ export default function AuthLayout({
   children: React.ReactNode
 }>) {
   return (
-    <div className="min-h-screen bg-background lg:grid lg:grid-cols-2">
+    <div className="min-h-dvh bg-background lg:grid lg:grid-cols-2">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-[10px] focus:text-[14px] focus:font-semibold focus:outline-none"
+      >
+        Skip to content
+      </a>
       <div className="relative hidden lg:flex flex-col justify-between p-12 bg-[#15181D] text-[#F3F4F1] dark:bg-card dark:border-r dark:border-border dark:text-foreground">
         <div>
           <Link
@@ -27,9 +33,9 @@ export default function AuthLayout({
         </div>
 
         <div>
-          <h1 className="text-[56px] leading-none font-bold tracking-[-0.045em] max-w-[440px]">
+          <p className="text-[56px] leading-none font-bold tracking-[-0.045em] max-w-[440px]">
             {APP_TAGLINE}
-          </h1>
+          </p>
 
           <div
             className="mt-[40px] relative inline-grid grid-cols-7 gap-[8px]"
@@ -83,7 +89,7 @@ export default function AuthLayout({
         </div>
       </div>
 
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-dvh flex-col">
         <div className="lg:hidden px-4 sm:px-6 pt-6">
           <Link
             href="/dashboard"
@@ -93,9 +99,9 @@ export default function AuthLayout({
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
+        <main id="main" className="flex flex-1 items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
           <div className="w-full max-w-[380px]">{children}</div>
-        </div>
+        </main>
       </div>
     </div>
   )

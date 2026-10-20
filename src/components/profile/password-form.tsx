@@ -33,16 +33,19 @@ export function PasswordForm() {
               htmlFor="password"
               className="text-[14px] font-medium text-foreground block"
             >
-              New password
+              New password <span aria-hidden="true" className="text-muted-foreground ml-0.5">*</span><span className="sr-only">(required)</span>
             </label>
             <input
               id="password"
               name="password"
               type="password"
               required
+              aria-required="true"
+              aria-invalid={Boolean(state && "error" in state)}
+              aria-describedby={state && "error" in state ? "password-error" : undefined}
               minLength={6}
               autoComplete="new-password"
-              className="h-11 w-full rounded-lg px-3.5 text-[15px] border border-input bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="h-11 w-full rounded-lg px-3.5 text-base md:text-[15px] border border-input bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
 
@@ -51,21 +54,24 @@ export function PasswordForm() {
               htmlFor="confirm"
               className="text-[14px] font-medium text-foreground block"
             >
-              Confirm password
+              Confirm password <span aria-hidden="true" className="text-muted-foreground ml-0.5">*</span><span className="sr-only">(required)</span>
             </label>
             <input
               id="confirm"
               name="confirm"
               type="password"
               required
+              aria-required="true"
+              aria-invalid={Boolean(state && "error" in state)}
+              aria-describedby={state && "error" in state ? "password-error" : undefined}
               minLength={6}
               autoComplete="new-password"
-              className="h-11 w-full rounded-lg px-3.5 text-[15px] border border-input bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="h-11 w-full rounded-lg px-3.5 text-base md:text-[15px] border border-input bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             />
           </div>
 
           {state && "error" in state && (
-            <p role="alert" className="text-[14px] text-destructive">
+            <p id="password-error" role="alert" className="text-[14px] text-destructive">
               {state.error}
             </p>
           )}
@@ -73,7 +79,7 @@ export function PasswordForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer disabled:opacity-60 transition-opacity"
+            className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer disabled:opacity-60 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {isPending ? "Updating..." : "Update password"}
           </button>

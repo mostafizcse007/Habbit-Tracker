@@ -66,15 +66,15 @@
   --muted-foreground: #5E636B;
   --accent: #E9EBE6;
   --accent-foreground: #15181D;
-  --destructive: oklch(0.577 0.245 27.325);
+  --destructive: #CE2C2C;
   --border: #DEE0DA;
-  --input: #C4C7BF;
+  --input: #858A7F;
   --ring: #15181D;
   --radius: 0.625rem;
   --highlight: rgba(255,214,10,0.22);
   --highlight-solid: #FFE45C;
   --marker: #FFE45C;
-  --line-strong: #C4C7BF;
+  --line-strong: #858A7F;
   --text-soft: #3F444B;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -106,14 +106,14 @@
   --muted-foreground: #9CA2AB;
   --accent: #20242A;
   --accent-foreground: #ECEDEA;
-  --destructive: oklch(0.704 0.191 22.216);
+  --destructive: #FF6467;
   --border: #2B2F36;
-  --input: #3A3F47;
+  --input: #636B78;
   --ring: #ECEDEA;
   --highlight: rgba(255,214,10,0.10);
   --highlight-solid: #FFE45C;
   --marker: rgba(255, 228, 92, 0.32);
-  --line-strong: #444A53;
+  --line-strong: #666E7C;
   --text-soft: #C3C7CC;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -133,6 +133,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -145,6 +146,22 @@
   html,
   body {
     overflow-x: clip;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+  button,
+  [role="button"],
+  nav,
+  [role="navigation"],
+  [role="tab"] {
+    user-select: none;
+    -webkit-user-select: none;
   }
 }
 
@@ -260,5 +277,30 @@
     animation-delay: 0.01ms !important;
     transition-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 767px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+  }
+  [data-slot="dialog-content"][data-open] {
+    animation: sheet-slide-up 220ms ease-out both;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@keyframes sheet-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

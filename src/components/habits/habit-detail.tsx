@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, FileText, Plus, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -20,14 +20,17 @@ import {
 import { formatSchedule } from "@/lib/habit-schedule"
 import { fetchAllLogs } from "@/lib/logs"
 import { createClient } from "@/lib/supabase/client"
-import { toggleHabitLog } from "@/app/(app)/dashboard/actions"
+import { toggleHabitLog, saveHabitNote } from "@/app/(app)/dashboard/actions"
 import { HabitActions } from "@/components/habits/habit-actions"
 import { HabitHistoryEditor } from "@/components/habits/habit-history-editor"
 import { WeekdayBars } from "@/components/habits/weekday-bars"
+import { HabitNoteDialog } from "@/components/habits/habit-note-dialog"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAchievementCheck } from "@/hooks/use-achievement-check"
 import { useJustChanged } from "@/hooks/use-just-changed"
 import { StreakNumber } from "@/components/habits/streak-number"
+import { tapHaptic } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
 
 interface HabitDetailProps {
@@ -50,6 +53,8 @@ export function HabitDetail({ habit }: HabitDetailProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [today, setToday] = useState<string>("")
   const [logs, setLogs] = useState<string[]>([])
+  const [notesByDate, setNotesByDate] = useState<Record<string, string>>({})
+  const [activeNoteDate, setActiveNoteDate] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
 
@@ -63,6 +68,13 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         toast.error("Failed to load habit history")
       } else if (data) {
         setLogs(data.map((l) => l.completed_on))
+        const noteMap: Record<string, string> = {}
+        for (const l of data) {
+          if (l.note) {
+            noteMap[l.completed_on] = l.note
+          }
+        }
+        setNotesByDate(noteMap)
       }
 
       setToday(todayStr)
@@ -92,6 +104,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
     const next = !logs.includes(date)
     if (next) {
       mark(`${habit.id}:${date}`)
+      tapHaptic()
     }
 
     setLogs((prev) => (next ? [...prev, date] : prev.filter((d) => d !== date)))
@@ -122,6 +135,53 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         updated.delete(date)
         return updated
       })
+    }
+  }
+
+  const handleSaveNote = async (
+    habitId: string,
+    date: string,
+    note: string | null
+  ) => {
+    const previousNote = notesByDate[date]
+    const wasLogged = logs.includes(date)
+
+    setNotesByDate((prev) => {
+      const next = { ...prev }
+      if (note) next[date] = note
+      else delete next[date]
+      return next
+    })
+
+    if (note && !wasLogged) {
+      setLogs((prev) => [...prev, date])
+    }
+
+    try {
+      const result = await saveHabitNote(habitId, date, note)
+      if (result && "error" in result) {
+        setNotesByDate((prev) => {
+          const next = { ...prev }
+          if (previousNote) next[date] = previousNote
+          else delete next[date]
+          return next
+        })
+        if (note && !wasLogged) {
+          setLogs((prev) => prev.filter((d) => d !== date))
+        }
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      setNotesByDate((prev) => {
+        const next = { ...prev }
+        if (previousNote) next[date] = previousNote
+        else delete next[date]
+        return next
+      })
+      if (note && !wasLogged) {
+        setLogs((prev) => prev.filter((d) => d !== date))
+      }
+      throw err
     }
   }
 
@@ -275,6 +335,19 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         <p className="mt-3 text-[16px] md:text-[19px] leading-[1.4] text-text-soft">
           {scheduleText}. Started {startedText}.
         </p>
+
+        {habit.tags && habit.tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {habit.tags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-secondary text-secondary-foreground border border-border"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
@@ -357,9 +430,9 @@ export function HabitDetail({ habit }: HabitDetailProps) {
 
       <div className="mt-6 bg-card border border-border rounded-[14px] overflow-hidden p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div className="text-[17px] font-semibold text-foreground">
+          <h2 className="text-[17px] font-semibold text-foreground">
             Last 12 months
-          </div>
+          </h2>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <span
@@ -382,7 +455,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         <div ref={scrollContainerRef} className="overflow-x-auto pb-2 min-w-0 max-w-full">
           <div
             role="img"
-            aria-label={`Check-in history for the last 12 months: ${heatmapCheckInsCount} check-ins`}
+            aria-label={`Check-in history for the last 12 months: ${heatmapCheckInsCount} check-ins, ${rateStats.rate ?? 0}% completed`}
             className="inline-flex gap-2 min-w-max"
           >
             <div className="flex flex-col">
@@ -496,6 +569,85 @@ export function HabitDetail({ habit }: HabitDetailProps) {
         logs={logs}
         today={today}
       />
+
+      {/* Daily Notes & Journal Section */}
+      <div className="mt-8 bg-card border border-border rounded-[14px] p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-md bg-primary/10 text-primary">
+              <FileText className="size-4" />
+            </div>
+            <div>
+              <h2 className="text-[17px] font-semibold text-foreground">
+                Daily Reflections & Notes
+              </h2>
+              <p className="text-[13px] text-muted-foreground mt-0.5">
+                Log observations, obstacles, or wins on your habit check-ins
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setActiveNoteDate(today)}
+            className="h-9 px-3.5 rounded-lg text-[13px] font-medium cursor-pointer shrink-0"
+          >
+            <Plus className="size-3.5 mr-1.5" />
+            {notesByDate[today] ? "Edit today's note" : "Add note for today"}
+          </Button>
+        </div>
+
+        {Object.keys(notesByDate).length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground text-[14px] border border-dashed border-border rounded-xl">
+            No reflections recorded yet. Click &quot;Add note for today&quot; to write your first reflection!
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+            {Object.entries(notesByDate)
+              .sort(([a], [b]) => b.localeCompare(a))
+              .map(([date, noteText]) => {
+                const d = parseLocalDateString(date)
+                const formatted = d.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+                return (
+                  <div
+                    key={date}
+                    onClick={() => setActiveNoteDate(date)}
+                    className="p-4 rounded-xl border border-border bg-background hover:border-foreground/40 transition-colors cursor-pointer group space-y-2"
+                  >
+                    <div className="flex items-center justify-between text-[12px] text-muted-foreground">
+                      <span className="font-semibold text-foreground">{formatted}</span>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-primary text-[12px] font-medium">
+                        <Pencil className="size-3" /> Edit
+                      </span>
+                    </div>
+                    <p className="text-[13.5px] leading-relaxed text-text-soft whitespace-pre-wrap">
+                      {noteText}
+                    </p>
+                  </div>
+                )
+              })}
+          </div>
+        )}
+      </div>
+
+      {activeNoteDate && (
+        <HabitNoteDialog
+          open={Boolean(activeNoteDate)}
+          onOpenChange={(open) => {
+            if (!open) setActiveNoteDate(null)
+          }}
+          habit={habit}
+          date={activeNoteDate}
+          initialNote={notesByDate[activeNoteDate]}
+          onSave={handleSaveNote}
+        />
+      )}
     </div>
   )
 }

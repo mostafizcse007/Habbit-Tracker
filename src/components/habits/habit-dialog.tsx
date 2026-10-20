@@ -48,7 +48,7 @@ export function HabitDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger render={trigger} />}
-      <DialogContent className="rounded-[14px] border border-border bg-card shadow-none p-6">
+      <DialogContent className="rounded-t-[14px] md:rounded-[14px] border-t md:border border-border bg-card shadow-none p-6">
         <DialogHeader>
           <DialogTitle className="text-[22px] font-bold tracking-[-0.02em]">
             {habit ? "Edit habit" : "New habit"}

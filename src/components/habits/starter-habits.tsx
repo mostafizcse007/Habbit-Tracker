@@ -90,7 +90,7 @@ export function StarterHabits() {
                     aria-pressed={isSelected}
                     onClick={() => toggleKey(template.key)}
                     className={cn(
-                      "rounded-[10px] border px-4 py-3 min-h-[56px] flex items-center gap-3 text-left w-full cursor-pointer motion-safe:transition-colors",
+                      "rounded-[10px] border px-4 py-3 min-h-[56px] flex items-center gap-3 text-left w-full cursor-pointer motion-safe:transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       isSelected
                         ? "border-foreground"
                         : "border-border hover:border-line-strong"
@@ -143,7 +143,7 @@ export function StarterHabits() {
           type="button"
           onClick={handleAdd}
           disabled={selectedCount === 0 || isPending}
-          className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer disabled:opacity-50 disabled:pointer-events-none transition-opacity"
+          className="h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer disabled:opacity-50 disabled:pointer-events-none transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           {buttonLabel}
         </button>
@@ -151,7 +151,7 @@ export function StarterHabits() {
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
-          className="text-[15px] font-semibold text-foreground hover:text-muted-foreground transition-colors cursor-pointer"
+          className="relative inline-flex items-center min-h-[44px] md:min-h-0 text-[15px] font-semibold text-foreground hover:text-muted-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           Create my own
         </button>

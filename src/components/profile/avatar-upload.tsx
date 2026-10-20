@@ -145,7 +145,7 @@ export function AvatarUpload({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isWorking}
-            className="h-11 px-5 rounded-[10px] border border-input bg-transparent text-foreground text-[15px] font-semibold cursor-pointer disabled:opacity-60 transition-opacity hover:bg-muted"
+            className="h-11 px-5 rounded-[10px] border border-input bg-transparent text-foreground text-[15px] font-semibold cursor-pointer disabled:opacity-60 transition-opacity hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {isUploading ? "Uploading..." : "Upload photo"}
           </button>
@@ -155,7 +155,7 @@ export function AvatarUpload({
               type="button"
               onClick={handleRemove}
               disabled={isWorking}
-              className="text-[14px] font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-60 transition-colors"
+              className="relative inline-flex items-center min-h-[44px] md:min-h-0 text-[14px] font-medium text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {isPending ? "Removing..." : "Remove"}
             </button>

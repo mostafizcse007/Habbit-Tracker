@@ -70,9 +70,9 @@ export function HabitActions({
           render={
             <button
               type="button"
-              className="size-[36px] rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              className="size-[36px] rounded-lg hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer transition-colors relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 md:after:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               disabled={isPending}
-              aria-label="Habit options"
+              aria-label={`Options for ${habit.name}`}
             >
               <MoreHorizontalIcon className="size-4" />
             </button>
@@ -104,7 +104,7 @@ export function HabitActions({
       />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="rounded-[14px] border border-border bg-card shadow-none p-6">
+        <DialogContent className="rounded-t-[14px] md:rounded-[14px] border-t md:border border-border bg-card shadow-none p-6">
           <DialogHeader>
             <DialogTitle className="text-[22px] font-bold tracking-[-0.02em]">
               Delete habit

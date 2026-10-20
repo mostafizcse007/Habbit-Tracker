@@ -15,19 +15,20 @@ export function AppNav({ mobile }: AppNavProps) {
     { href: "/dashboard", label: "Today" },
     { href: "/habits", label: "Habits" },
     { href: "/analytics", label: "Analytics" },
-    { href: "/achievements", label: "Badges", ariaLabel: "Achievements" },
+    { href: "/achievements", label: "Achievements" },
   ]
 
   return (
     <nav
+      aria-label="Main"
       className={cn(
-        "flex items-center",
+        "flex items-center select-none",
         mobile
           ? "gap-4 sm:gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : "gap-[24px]"
       )}
     >
-      {links.map(({ href, label, ariaLabel }) => {
+      {links.map(({ href, label }) => {
         const isActive =
           pathname === href ||
           (href !== "/dashboard" && pathname.startsWith(href))
@@ -35,9 +36,9 @@ export function AppNav({ mobile }: AppNavProps) {
           <Link
             key={href}
             href={href}
-            aria-label={ariaLabel}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-              "text-[15px] transition-colors whitespace-nowrap shrink-0",
+              "text-[15px] transition-colors whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm",
               mobile ? "py-2.5" : "py-1",
               isActive
                 ? cn(

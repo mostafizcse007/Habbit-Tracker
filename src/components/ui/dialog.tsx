@@ -53,11 +53,15 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-5 rounded-2xl border border-border/70 bg-card p-6 text-card-foreground shadow-lg duration-150 outline-none sm:max-w-md data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed inset-x-0 bottom-0 z-50 grid w-full max-w-full max-h-[90dvh] overflow-y-auto rounded-t-[14px] rounded-b-none border-t border-border/70 bg-card p-6 pt-7 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-card-foreground shadow-lg outline-none md:top-1/2 md:left-1/2 md:bottom-auto md:max-w-md md:max-h-[calc(100dvh-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[14px] md:border md:p-6 md:data-open:animate-in md:data-open:fade-in-0 md:data-open:zoom-in-95 md:data-closed:animate-out md:data-closed:fade-out-0 md:data-closed:zoom-out-95",
           className
         )}
         {...props}
       >
+        <div
+          className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-[36px] h-[4px] rounded-full bg-line-strong pointer-events-none"
+          aria-hidden="true"
+        />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close
@@ -65,7 +69,7 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-4 right-4 rounded-lg text-muted-foreground hover:text-foreground"
+                className="absolute top-4 right-4 rounded-lg text-muted-foreground hover:text-foreground relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 md:after:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 size="icon-sm"
                 aria-label="Close dialog"
               />
@@ -102,7 +106,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-2xl border-t border-border/70 bg-muted/30 p-4 sm:flex-row sm:justify-end",
+        "-mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-none md:rounded-b-[14px] border-t border-border/70 bg-muted/30 p-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}

@@ -24,8 +24,10 @@ export default async function DashboardPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
-        <h1 className="sr-only">Dashboard</h1>
+      <div className="pt-7 md:pt-14 space-y-6">
+        <h1 className="text-[44px] md:text-[56px] font-bold leading-[0.95] tracking-[-0.045em] text-foreground">
+          Today
+        </h1>
         <p className="text-destructive">
           Failed to load habits. Please try again later.
         </p>
@@ -33,10 +35,5 @@ export default async function DashboardPage() {
     )
   }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="sr-only">Dashboard</h1>
-      <DashboardContent habits={habits} />
-    </div>
-  )
+  return <DashboardContent habits={habits} />
 }

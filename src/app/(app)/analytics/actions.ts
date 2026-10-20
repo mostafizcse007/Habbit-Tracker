@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { fetchAllLogs } from "@/lib/logs"
 import { getTodayInTimeZone, isValidTimeZone } from "@/lib/timezone"
 import { getLocalDateString } from "@/lib/dates"
+import { isDemoUser } from "@/lib/demo"
 import type { HabitInput } from "@/lib/analytics"
 import {
   buildReviewInput,
@@ -53,6 +54,10 @@ export async function generateWeeklyReview(
     return { error: "Not signed in" }
   }
 
+  if (isDemoUser(user)) {
+    return { error: "Weekly reviews need a real account. Create one to try it." }
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("timezone")
@@ -97,11 +102,13 @@ export async function generateWeeklyReview(
     .order("created_at", { ascending: true })
 
   if (habitsError || !habits) {
+    console.error("generateWeeklyReview habits query error:", habitsError)
     return { error: "Could not write your review right now. Try again later." }
   }
 
   const { data: logsData, error: logsError } = await fetchAllLogs(supabase)
   if (logsError || !logsData) {
+    console.error("generateWeeklyReview logs query error:", logsError)
     return { error: "Could not write your review right now. Try again later." }
   }
 
@@ -134,11 +141,31 @@ export async function generateWeeklyReview(
     return { notEnough: true }
   }
 
+  const habitNameMap = new Map(habits.map((h) => [h.id, h.name]))
+  const recentNotes: { habit: string; date: string; note: string }[] = []
+  for (const log of logsData) {
+    if (
+      log.note &&
+      log.completed_on >= period.start &&
+      log.completed_on <= period.end
+    ) {
+      const name = habitNameMap.get(log.habit_id)
+      if (name) {
+        recentNotes.push({
+          habit: name,
+          date: log.completed_on,
+          note: log.note,
+        })
+      }
+    }
+  }
+
   const reviewInput = buildReviewInput(
     habitInputs,
     logsByHabit,
     period.start,
-    period.end
+    period.end,
+    recentNotes
   )
   const prompt = buildReviewPrompt(reviewInput)
 
@@ -149,6 +176,7 @@ export async function generateWeeklyReview(
       prompt,
     })
   } catch (err) {
+    console.error("generateWeeklyReview AI generation error:", err)
     if (err instanceof AiError && err.kind === "rate_limited") {
       return {
         error: "The AI service is busy right now. Try again in a minute.",
@@ -173,6 +201,7 @@ export async function generateWeeklyReview(
       .single()
 
     if (updateError || !updated) {
+      console.error("generateWeeklyReview weekly_reviews update error:", updateError)
       return {
         error: "Could not write your review right now. Try again later.",
       }
@@ -192,6 +221,7 @@ export async function generateWeeklyReview(
   const { data: inserted, error: insertError } = await supabase
     .from("weekly_reviews")
     .insert({
+      user_id: user.id,
       period_end: period.end,
       content: truncatedContent,
     })
@@ -199,6 +229,7 @@ export async function generateWeeklyReview(
     .single()
 
   if (insertError) {
+    console.error("generateWeeklyReview weekly_reviews insert error:", insertError)
     if (insertError.code === "23505") {
       const { data: fallbackRow } = await supabase
         .from("weekly_reviews")
@@ -222,6 +253,7 @@ export async function generateWeeklyReview(
   }
 
   if (!inserted) {
+    console.error("generateWeeklyReview: inserted is null")
     return { error: "Could not write your review right now. Try again later." }
   }
 

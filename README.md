@@ -23,6 +23,18 @@ A habit tracking web application to manage habits, log daily check-ins, track st
 - **Profile with time zone and photo**: Profile photo upload to Supabase Storage, display name, and IANA time zone configuration.
 - **AI weekly review**: Weekly summary generated from user statistics via Google Gemini, cached in the database, with up to 2 regenerations per week.
 
+## Demo Mode
+
+The application supports an instant one-click demo for visitors:
+- **What it does**: Seeds 6 sample habits with ~90 days of check-in history so users can explore the Today sheet, heatmaps, analytics, and achievements without signing up.
+- **Supabase anonymous sign-ins**: Built on Supabase anonymous authentication. Anonymous sign-ins must be enabled in the Supabase Dashboard under **Authentication > Sign In / Providers > Anonymous sign-ins**.
+- **Migration**: Requires `supabase/migrations/008_demo.sql` (defines the `seed_demo_data()` RPC function and blocks avatar uploads for anonymous users).
+- **Cleanup**: Demo accounts are temporary and can be cleaned up periodically by running:
+  ```sql
+  delete from auth.users where is_anonymous is true and created_at < now() - interval '7 days';
+  ```
+- **CAPTCHA recommendation**: Setting up a CAPTCHA provider (such as Cloudflare Turnstile) in Supabase Auth is recommended before a public launch to protect against automated abuse.
+
 ## Setup
 
 1. Clone the repository:
@@ -48,6 +60,7 @@ A habit tracking web application to manage habits, log daily check-ins, track st
    - `supabase/migrations/003_habit_order.sql.sql` (adds `sort_order` to `habits`, index, and `reorder_habits` function)
    - `supabase/migrations/004_achievements.sql.sql` (creates `user_achievements` table and RLS policies)
    - `supabase/migrations/006_weekly_reviews.sql` (creates `weekly_reviews` table and RLS policies)
+   - `supabase/migrations/008_demo.sql` (creates `seed_demo_data` RPC function and avatar storage policy for demo accounts)
 
    *(Note: Migration `005` for username and email-code feature is not applied yet, only needed for the sign-up username and OTP feature that is not built yet).*
 
@@ -64,7 +77,7 @@ A habit tracking web application to manage habits, log daily check-ins, track st
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous API key | Public (client and server) |
 | `NEXT_PUBLIC_SITE_URL` | Site URL (optional locally, set to the live URL once deployed) | Public (client and server) |
 | `GEMINI_API_KEY` | Google Gemini API key | Secret (server-only, never exposed to client) |
-| `GEMINI_MODEL` | Gemini model name (default: `gemini-2.5-flash`) | Server-only |
+| `GEMINI_MODEL` | Gemini model name (default: `gemini-3.5-flash-lite`) | Server-only |
 
 > Note: Habit names and weekly numbers are sent to Google's Gemini API for the weekly review.
 

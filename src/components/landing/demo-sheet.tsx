@@ -13,6 +13,7 @@ import { calculateStreaks } from "@/lib/streaks"
 import { WeekCell, type CellState } from "@/components/habits/week-cell"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useJustChanged } from "@/hooks/use-just-changed"
+import { tapHaptic } from "@/lib/haptics"
 
 
 interface SampleHabitConfig {
@@ -153,6 +154,7 @@ function ActiveDemoSheet() {
     const isTurningOn = !current.includes(date)
     if (isTurningOn) {
       mark(key)
+      tapHaptic()
     }
     setLogsByHabit((prev) => {
       const logs = prev[habitId] ?? []

@@ -17,6 +17,10 @@ const habitSchema = z.object({
   frequency: z
     .array(z.number().int().min(0).max(6))
     .min(1, "Select at least one day"),
+  tags: z
+    .array(z.string().trim().min(1).max(24))
+    .max(10)
+    .default([]),
 })
 
 const reorderSchema = z
@@ -37,10 +41,19 @@ export async function createHabit(
   formData: FormData
 ): Promise<HabitActionState> {
   const rawFrequency = formData.getAll("frequency").map((val) => Number(val))
+  const rawTags = formData.getAll("tags").flatMap((t) =>
+    typeof t === "string"
+      ? t
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
+  )
   const parsed = habitSchema.safeParse({
     name: formData.get("name"),
     color: formData.get("color"),
     frequency: rawFrequency,
+    tags: rawTags,
   })
 
   if (!parsed.success) {
@@ -70,6 +83,7 @@ export async function createHabit(
     name: parsed.data.name,
     color: parsed.data.color,
     frequency: parsed.data.frequency,
+    tags: parsed.data.tags,
     sort_order: nextSortOrder,
   })
 
@@ -92,10 +106,19 @@ export async function updateHabit(
   }
 
   const rawFrequency = formData.getAll("frequency").map((val) => Number(val))
+  const rawTags = formData.getAll("tags").flatMap((t) =>
+    typeof t === "string"
+      ? t
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
+  )
   const parsed = habitSchema.safeParse({
     name: formData.get("name"),
     color: formData.get("color"),
     frequency: rawFrequency,
+    tags: rawTags,
   })
 
   if (!parsed.success) {
@@ -109,6 +132,7 @@ export async function updateHabit(
       name: parsed.data.name,
       color: parsed.data.color,
       frequency: parsed.data.frequency,
+      tags: parsed.data.tags,
     })
     .eq("id", id)
 
@@ -238,6 +262,7 @@ export async function createHabitsFromTemplates(
     name: template.name,
     color: template.color,
     frequency: template.frequency,
+    tags: [template.group],
     sort_order: startSortOrder + index,
   }))
 

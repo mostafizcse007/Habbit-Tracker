@@ -83,3 +83,62 @@ export async function toggleHabitLog(
   revalidatePath("/dashboard")
   return { success: true }
 }
+
+export async function saveHabitNote(
+  habitId: string,
+  date: string,
+  note: string | null
+): Promise<{ error: string } | { success: true }> {
+  if (!habitId || typeof habitId !== "string" || habitId.trim() === "") {
+    return { error: "Invalid habit ID" }
+  }
+
+  if (!date || typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { error: "Invalid date format" }
+  }
+
+  const cleanNote = note ? note.trim().slice(0, 500) : null
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const { data: existing } = await supabase
+    .from("habit_logs")
+    .select("id")
+    .eq("habit_id", habitId)
+    .eq("completed_on", date)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from("habit_logs")
+      .update({ note: cleanNote })
+      .eq("id", existing.id)
+
+    if (error) {
+      return { error: error.message }
+    }
+  } else {
+    const { error } = await supabase.from("habit_logs").insert({
+      habit_id: habitId,
+      completed_on: date,
+      note: cleanNote,
+    })
+
+    if (error) {
+      return { error: error.message }
+    }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath(`/habits/${habitId}`)
+  return { success: true }
+}
+
