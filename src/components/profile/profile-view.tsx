@@ -5,7 +5,6 @@ import {
   useTransition,
   useRef,
   useEffect,
-  useMemo,
 } from "react"
 import { useActionState } from "react"
 import { useRouter } from "next/navigation"
@@ -263,12 +262,14 @@ export function ProfileView({
   const [coverConfig, setCoverConfig] = useState<CoverConfig>(
     initialCover ?? DEFAULT_COVER
   )
+  const [prevInitialCover, setPrevInitialCover] = useState<CoverConfig | undefined>(initialCover)
 
-  useEffect(() => {
+  if (prevInitialCover !== initialCover) {
+    setPrevInitialCover(initialCover)
     if (initialCover) {
       setCoverConfig(initialCover)
     }
-  }, [initialCover])
+  }
 
   // Purge legacy stale localStorage so old browser caches cannot override the server
   useEffect(() => {

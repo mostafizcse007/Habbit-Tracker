@@ -94,6 +94,7 @@ export async function createHabit(
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/profile")
   return { success: true }
 }
 
@@ -183,6 +184,7 @@ export async function archiveHabit(id: string): Promise<HabitActionState> {
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/profile")
   return { success: true }
 }
 
@@ -213,6 +215,38 @@ export async function deleteHabit(id: string): Promise<HabitActionState> {
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/profile")
+  return { success: true }
+}
+
+export async function unarchiveHabit(id: string): Promise<HabitActionState> {
+  if (!id || typeof id !== "string" || !id.trim()) {
+    return { error: "Habit ID is required" }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const { error } = await supabase
+    .from("habits")
+    .update({ archived: false })
+    .eq("id", id)
+    .eq("user_id", user.id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/habits")
+  revalidatePath("/dashboard")
+  revalidatePath("/analytics")
+  revalidatePath("/profile")
   return { success: true }
 }
 
@@ -309,6 +343,7 @@ export async function createHabitsFromTemplates(
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/profile")
   return { success: true, added: rows.length }
 }
 

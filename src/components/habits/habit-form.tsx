@@ -66,7 +66,9 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
   const [customTag, setCustomTag] = useState("")
 
   const valuesRef = useRef({ name, selectedColor, selectedDays, tags })
-  valuesRef.current = { name, selectedColor, selectedDays, tags }
+  useEffect(() => {
+    valuesRef.current = { name, selectedColor, selectedDays, tags }
+  }, [name, selectedColor, selectedDays, tags])
 
   useEffect(() => {
     if (state?.success && onSuccess) {

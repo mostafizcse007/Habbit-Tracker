@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Plus, Pencil, Shield } from "lucide-react"
+import { ArrowLeft, FileText, Plus, Pencil, Shield, Archive, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -21,6 +21,7 @@ import { formatSchedule } from "@/lib/habit-schedule"
 import { fetchAllLogs } from "@/lib/logs"
 import { createClient } from "@/lib/supabase/client"
 import { toggleHabitLog, saveHabitNote } from "@/app/(app)/dashboard/actions"
+import { unarchiveHabit } from "@/app/(app)/habits/actions"
 import { HabitActions } from "@/components/habits/habit-actions"
 import { HabitHistoryEditor } from "@/components/habits/habit-history-editor"
 import { WeekdayBars } from "@/components/habits/weekday-bars"
@@ -52,6 +53,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
   const { mark, isRecent } = useJustChanged()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [currentHabit, setCurrentHabit] = useState<Habit>(habit)
+  const [prevHabit, setPrevHabit] = useState<Habit>(habit)
   const [today, setToday] = useState<string>("")
   const [logs, setLogs] = useState<string[]>([])
   const [notesByDate, setNotesByDate] = useState<Record<string, string>>({})
@@ -59,9 +61,10 @@ export function HabitDetail({ habit }: HabitDetailProps) {
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
+  if (prevHabit !== habit) {
+    setPrevHabit(habit)
     setCurrentHabit(habit)
-  }, [habit])
+  }
 
   useEffect(() => {
     const loadLogs = async () => {
@@ -333,6 +336,10 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           <HabitActions
             habit={currentHabit}
             onArchived={handleAfterAction}
+            onUnarchived={() => {
+              setCurrentHabit((prev) => ({ ...prev, archived: false }))
+              router.refresh()
+            }}
             onDeleted={handleAfterAction}
             onUpdated={(updated) =>
               setCurrentHabit((prev) => ({ ...prev, ...updated }))
@@ -354,6 +361,35 @@ export function HabitDetail({ habit }: HabitDetailProps) {
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+
+        {currentHabit.archived && (
+          <div className="mt-6 p-4 rounded-[12px] bg-muted/70 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-[14px] text-muted-foreground">
+              <Archive className="size-4 shrink-0" />
+              <span>
+                This habit is currently archived. It is hidden from Today and active counts.
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                const res = await unarchiveHabit(currentHabit.id)
+                if (res?.error) {
+                  toast.error(res.error)
+                } else {
+                  toast.success("Habit restored")
+                  setCurrentHabit((prev) => ({ ...prev, archived: false }))
+                  router.refresh()
+                }
+              }}
+              className="h-8 px-3 rounded-[8px] text-[13px] font-medium shrink-0 cursor-pointer"
+            >
+              <RotateCcw className="size-3.5 mr-1.5" />
+              Restore habit
+            </Button>
           </div>
         )}
       </div>

@@ -31,7 +31,6 @@ export async function generateMetadata({
     .from("habits")
     .select("name")
     .eq("id", id)
-    .eq("archived", false)
     .maybeSingle()
 
   return {
@@ -57,7 +56,6 @@ export default async function HabitPage({ params }: HabitPageProps) {
     .from("habits")
     .select("*")
     .eq("id", id)
-    .eq("archived", false)
     .maybeSingle()
 
   if (error || !habit) {

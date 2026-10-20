@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server"
 import { Button } from "@/components/ui/button"
 import { HabitDialog } from "@/components/habits/habit-dialog"
 import { HabitList } from "@/components/habits/habit-list"
-import { StarterHabits } from "@/components/habits/starter-habits"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -24,7 +23,6 @@ export default async function HabitsPage() {
   const { data: habits, error } = await supabase
     .from("habits")
     .select("*")
-    .eq("archived", false)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true })
 
@@ -44,25 +42,24 @@ export default async function HabitsPage() {
   return (
     <div className="pt-7 md:pt-14 pb-14 md:pb-[72px]">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <h1 className="text-[44px] md:text-[56px] font-bold leading-[0.95] tracking-[-0.045em] text-foreground">
-          Habits
-        </h1>
+        <div>
+          <h1 className="text-[44px] md:text-[56px] font-bold leading-[0.95] tracking-[-0.045em] text-foreground">
+            Habits
+          </h1>
+          <p className="mt-2 text-[15px] md:text-[16px] text-muted-foreground">
+            Organize, prioritize, and manage your daily routines.
+          </p>
+        </div>
         <HabitDialog
           trigger={
-            <Button className="w-full mt-5 md:w-auto md:mt-0 h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer">
+            <Button className="w-full mt-2 md:w-auto md:mt-0 h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer">
               New habit
             </Button>
           }
         />
       </div>
 
-      {habits.length === 0 ? (
-        <div className="mt-10">
-          <StarterHabits />
-        </div>
-      ) : (
-        <HabitList habits={habits} />
-      )}
+      <HabitList habits={habits ?? []} />
     </div>
   )
 }
