@@ -321,6 +321,7 @@ export async function updateCoverConfig(
     return { success: true }
   }
 
+  // 1. Persist to auth.users user_metadata for guaranteed cross-device sync
   const { error } = await supabase.auth.updateUser({
     data: { cover_config: config },
   })
@@ -329,7 +330,18 @@ export async function updateCoverConfig(
     return { error: error.message }
   }
 
+  // 2. Also persist to public.profiles table for database-level redundancy
+  const profileFields =
+    config.type === "preset"
+      ? { cover_preset: config.presetId, cover_url: null }
+      : { cover_url: config.customUrl, cover_preset: null }
+
+  try {
+    await supabase.from("profiles").update(profileFields).eq("id", user.id)
+  } catch {}
+
   revalidatePath("/profile")
+  revalidatePath("/", "layout")
   return { success: true }
 }
 

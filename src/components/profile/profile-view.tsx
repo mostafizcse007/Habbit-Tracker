@@ -5,10 +5,10 @@ import {
   useTransition,
   useRef,
   useEffect,
-  useSyncExternalStore,
   useMemo,
 } from "react"
 import { useActionState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   User,
@@ -124,17 +124,7 @@ export const COVER_PRESETS: CoverPreset[] = [
   },
 ]
 
-const DEFAULT_COVER = { type: "preset" as const, presetId: "aurora" }
-
-function subscribeCover(callback: () => void) {
-  if (typeof window === "undefined") return () => {}
-  window.addEventListener("storage", callback)
-  window.addEventListener("habit_cover_updated", callback)
-  return () => {
-    window.removeEventListener("storage", callback)
-    window.removeEventListener("habit_cover_updated", callback)
-  }
-}
+const DEFAULT_COVER: CoverConfig = { type: "preset", presetId: "aurora" }
 
 interface ProfileViewProps {
   user: {
@@ -147,6 +137,7 @@ interface ProfileViewProps {
   habitsCount: number
   totalLogsCount: number
   isDemo: boolean
+  initialCover?: CoverConfig
 }
 
 type TabKey = "general" | "preferences" | "security" | "data"
@@ -154,12 +145,62 @@ type TabKey = "general" | "preferences" | "security" | "data"
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"]
 const MAX_FILE_SIZE = 2 * 1024 * 1024
 
+async function compressCoverImage(file: File): Promise<Blob> {
+  return new Promise((resolve) => {
+    if (file.size <= 1024 * 1024) {
+      resolve(file)
+      return
+    }
+
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const maxWidth = 1920
+      const maxHeight = 1080
+      let { width, height } = img
+
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width)
+        width = maxWidth
+      }
+      if (height > maxHeight) {
+        width = Math.round((width * maxHeight) / height)
+        height = maxHeight
+      }
+
+      const canvas = document.createElement("canvas")
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        resolve(file)
+        return
+      }
+      ctx.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => {
+          resolve(blob || file)
+        },
+        "image/webp",
+        0.85
+      )
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(file)
+    }
+    img.src = url
+  })
+}
+
 export function ProfileView({
   user,
   profile,
   habitsCount,
   totalLogsCount,
   isDemo,
+  initialCover,
 }: ProfileViewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>("general")
   const [copiedHandle, setCopiedHandle] = useState(false)
@@ -216,50 +257,47 @@ export function ProfileView({
     useState<string>("")
   const [isExporting, setIsExporting] = useState(false)
 
-  // Initial server-side cover from account user_metadata
-  const initialServerCover = useMemo<CoverConfig>(() => {
-    const meta = user.user_metadata?.cover_config as CoverConfig | undefined
-    if (meta && (meta.type === "preset" || meta.type === "custom")) {
-      return meta
-    }
-    return DEFAULT_COVER
-  }, [user.user_metadata])
+  const router = useRouter()
 
-  // Cover banner state with useSyncExternalStore for hydration-safe reactive sync
-  const savedCoverJson = useSyncExternalStore(
-    subscribeCover,
-    () => {
-      try {
-        return localStorage.getItem(`habit_cover_${user.id}`)
-      } catch {
-        return null
-      }
-    },
-    () => null
+  // Cover banner state initialized directly from server
+  const [coverConfig, setCoverConfig] = useState<CoverConfig>(
+    initialCover ?? DEFAULT_COVER
   )
 
-  const coverConfig = useMemo<CoverConfig>(() => {
-    if (savedCoverJson) {
-      try {
-        return JSON.parse(savedCoverJson)
-      } catch {}
+  useEffect(() => {
+    if (initialCover) {
+      setCoverConfig(initialCover)
     }
-    return initialServerCover
-  }, [savedCoverJson, initialServerCover])
+  }, [initialCover])
 
-  // Seed localStorage from server user_metadata if absent
+  // Purge legacy stale localStorage so old browser caches cannot override the server
   useEffect(() => {
     try {
-      const existing = localStorage.getItem(`habit_cover_${user.id}`)
-      if (!existing && user.user_metadata?.cover_config) {
-        localStorage.setItem(
-          `habit_cover_${user.id}`,
-          JSON.stringify(user.user_metadata.cover_config)
-        )
-        window.dispatchEvent(new Event("habit_cover_updated"))
-      }
+      localStorage.removeItem(`habit_cover_${user.id}`)
     } catch {}
-  }, [user.id, user.user_metadata])
+  }, [user.id])
+
+  // Cross-device auto-sync: when switching to this window or tab, refresh server state
+  useEffect(() => {
+    const handleSync = () => {
+      if (document.visibilityState === "visible") {
+        router.refresh()
+      }
+    }
+    window.addEventListener("focus", handleSync)
+    document.addEventListener("visibilitychange", handleSync)
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        router.refresh()
+      }
+    }, 15000)
+
+    return () => {
+      window.removeEventListener("focus", handleSync)
+      document.removeEventListener("visibilitychange", handleSync)
+      clearInterval(interval)
+    }
+  }, [router])
 
   const [coverModalOpen, setCoverModalOpen] = useState(false)
   const [coverModalTab, setCoverModalTab] = useState<"presets" | "custom">(
@@ -389,13 +427,15 @@ export function ProfileView({
 
   const handleSelectPreset = async (presetId: string) => {
     const newConfig: CoverConfig = { type: "preset", presetId }
-    try {
-      localStorage.setItem(`habit_cover_${user.id}`, JSON.stringify(newConfig))
-      window.dispatchEvent(new Event("habit_cover_updated"))
-    } catch {}
+    setCoverConfig(newConfig)
     const found = COVER_PRESETS.find((p) => p.id === presetId)
     toast.success(`Cover theme set to ${found?.name ?? "preset"}.`)
-    await updateCoverConfig(newConfig)
+    const res = await updateCoverConfig(newConfig)
+    if (res?.error) {
+      toast.error(`Sync error: ${res.error}`)
+    } else {
+      router.refresh()
+    }
   }
 
   const handleCustomCoverUpload = async (
@@ -404,68 +444,51 @@ export function ProfileView({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Cover image must be 5 MB or less.")
-      return
-    }
-
     if (!ALLOWED_TYPES.includes(file.type)) {
       toast.error("Please choose a PNG, JPEG, or WebP image.")
       return
     }
 
     setIsUploadingCover(true)
-
-    // 1. Immediately read and display preview in the modal
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string
-      if (dataUrl) {
-        const previewConfig: CoverConfig = { type: "custom", customUrl: dataUrl }
-        try {
-          localStorage.setItem(
-            `habit_cover_${user.id}`,
-            JSON.stringify(previewConfig)
-          )
-          window.dispatchEvent(new Event("habit_cover_updated"))
-        } catch {}
-        toast.success("Cover image uploaded.")
-      }
-    }
-    reader.readAsDataURL(file)
-
-    // 2. Concurrently persist to Supabase storage and sync to account across all devices
     try {
-      let extension = "png"
-      if (file.type === "image/jpeg") extension = "jpg"
-      else if (file.type === "image/webp") extension = "webp"
-
+      const blobToUpload = await compressCoverImage(file)
+      const extension = blobToUpload.type === "image/webp" ? "webp" : "jpg"
       const filePath = `${user.id}/cover-${Date.now()}.${extension}`
+
+      // Update local preview immediately
+      const previewUrl = URL.createObjectURL(blobToUpload)
+      setCoverConfig({ type: "custom", customUrl: previewUrl })
 
       const { createClient } = await import("@/lib/supabase/client")
       const supabase = createClient()
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: false })
+        .upload(filePath, blobToUpload, {
+          contentType: blobToUpload.type || "image/webp",
+          upsert: false,
+        })
 
-      if (!uploadError) {
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("avatars").getPublicUrl(filePath)
+      if (uploadError) {
+        toast.error(`Upload error: ${uploadError.message}`)
+        return
+      }
 
-        const remoteConfig: CoverConfig = { type: "custom", customUrl: publicUrl }
-        try {
-          localStorage.setItem(
-            `habit_cover_${user.id}`,
-            JSON.stringify(remoteConfig)
-          )
-          window.dispatchEvent(new Event("habit_cover_updated"))
-        } catch {}
-        await updateCoverConfig(remoteConfig)
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(filePath)
+
+      const remoteConfig: CoverConfig = { type: "custom", customUrl: publicUrl }
+      setCoverConfig(remoteConfig)
+      const res = await updateCoverConfig(remoteConfig)
+      if (res && res.error) {
+        toast.error(`Sync error: ${res.error}`)
+      } else {
+        toast.success("Cover photo synced across devices.")
+        router.refresh()
       }
     } catch {
-      // Local preview already applied seamlessly
+      toast.error("Failed to upload cover image.")
     } finally {
       if (coverInputRef.current) coverInputRef.current.value = ""
       setIsUploadingCover(false)
@@ -474,12 +497,14 @@ export function ProfileView({
 
   const handleResetCover = async () => {
     const newConfig: CoverConfig = { type: "preset", presetId: "aurora" }
-    try {
-      localStorage.setItem(`habit_cover_${user.id}`, JSON.stringify(newConfig))
-      window.dispatchEvent(new Event("habit_cover_updated"))
-    } catch {}
+    setCoverConfig(newConfig)
     toast.success("Cover reset to Aurora Bloom.")
-    await updateCoverConfig(newConfig)
+    const res = await updateCoverConfig(newConfig)
+    if (res?.error) {
+      toast.error(`Sync error: ${res.error}`)
+    } else {
+      router.refresh()
+    }
   }
 
   const handleCopyHandle = () => {

@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server"
 import { isDemoUser } from "@/lib/demo"
 import { ProfileView } from "@/components/profile/profile-view"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: "Profile & Settings",
   robots: {
@@ -48,6 +51,28 @@ export default async function ProfilePage() {
 
   const isDemo = isDemoUser(user)
 
+  // Resolve cover banner configuration from database profile, falling back to auth user_metadata
+  const profileRecord = profile as Record<string, unknown> | null
+  const coverPreset = profileRecord?.cover_preset as string | undefined
+  const coverUrl = profileRecord?.cover_url as string | undefined
+  const metaCover = user.user_metadata?.cover_config as
+    | { type: "preset"; presetId: string }
+    | { type: "custom"; customUrl: string }
+    | undefined
+
+  let initialCover: { type: "preset"; presetId: string } | { type: "custom"; customUrl: string } = {
+    type: "preset",
+    presetId: "aurora",
+  }
+
+  if (coverUrl) {
+    initialCover = { type: "custom", customUrl: coverUrl }
+  } else if (coverPreset) {
+    initialCover = { type: "preset", presetId: coverPreset }
+  } else if (metaCover && (metaCover.type === "preset" || metaCover.type === "custom")) {
+    initialCover = metaCover
+  }
+
   return (
     <ProfileView
       user={{
@@ -60,6 +85,7 @@ export default async function ProfilePage() {
       habitsCount={habitsCount ?? 0}
       totalLogsCount={totalLogsCount ?? 0}
       isDemo={isDemo}
+      initialCover={initialCover}
     />
   )
 }
