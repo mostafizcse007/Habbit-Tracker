@@ -1397,9 +1397,11 @@ export function ProfileView({
               render={
                 <Button
                   type="button"
-                  className="h-9 px-4 rounded-[8px] text-[13px] font-semibold cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 rounded-[8px] text-[12px] text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  Done
+                  Close
                 </Button>
               }
             />
