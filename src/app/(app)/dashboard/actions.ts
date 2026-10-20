@@ -62,6 +62,7 @@ export async function toggleHabitLog(
   if (completed) {
     const { error } = await supabase.from("habit_logs").insert({
       habit_id: habitId,
+      user_id: user.id,
       completed_on: date,
     })
 
@@ -73,6 +74,7 @@ export async function toggleHabitLog(
       .from("habit_logs")
       .delete()
       .eq("habit_id", habitId)
+      .eq("user_id", user.id)
       .eq("completed_on", date)
 
     if (error) {
@@ -113,6 +115,7 @@ export async function saveHabitNote(
     .from("habit_logs")
     .select("id")
     .eq("habit_id", habitId)
+    .eq("user_id", user.id)
     .eq("completed_on", date)
     .maybeSingle()
 
@@ -121,6 +124,7 @@ export async function saveHabitNote(
       .from("habit_logs")
       .update({ note: cleanNote })
       .eq("id", existing.id)
+      .eq("user_id", user.id)
 
     if (error) {
       return { error: error.message }
@@ -128,6 +132,7 @@ export async function saveHabitNote(
   } else {
     const { error } = await supabase.from("habit_logs").insert({
       habit_id: habitId,
+      user_id: user.id,
       completed_on: date,
       note: cleanNote,
     })

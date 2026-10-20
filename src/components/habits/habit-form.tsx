@@ -263,7 +263,7 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
                 <button
                   type="button"
                   onClick={() => toggleTag(tag)}
-                  className="size-3.5 rounded-full inline-flex items-center justify-center hover:bg-primary/20 cursor-pointer"
+                  className="size-3.5 rounded-full inline-flex items-center justify-center hover:bg-primary/20 cursor-pointer relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={`Remove tag ${tag}`}
                 >
                   <svg
@@ -273,6 +273,7 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
+                    aria-hidden="true"
                   >
                     <path d="M2 2l8 8M10 2l-8 8" />
                   </svg>
@@ -291,8 +292,9 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
                 key={tag}
                 type="button"
                 onClick={() => toggleTag(tag)}
+                aria-pressed={isSelected}
                 className={cn(
-                  "h-7 px-2.5 rounded-md text-[12px] font-medium border transition-colors cursor-pointer",
+                  "h-7 px-2.5 rounded-md text-[12px] font-medium border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isSelected
                     ? "bg-foreground text-background border-foreground font-semibold"
                     : "border-input bg-card text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -306,7 +308,11 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
 
         {/* Custom tag input */}
         <div className="flex items-center gap-2 pt-1">
+          <label htmlFor="custom-tag-input" className="sr-only">
+            Add custom tag
+          </label>
           <input
+            id="custom-tag-input"
             type="text"
             value={customTag}
             onChange={(e) => setCustomTag(e.target.value)}
@@ -323,7 +329,7 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
             type="button"
             onClick={handleAddCustomTag}
             disabled={!customTag.trim() || tags.length >= 8}
-            className="h-9 px-3 rounded-lg border border-input text-[13px] font-medium bg-secondary text-secondary-foreground hover:bg-muted transition-colors disabled:opacity-40 cursor-pointer"
+            className="h-9 px-3 rounded-lg border border-input text-[13px] font-medium bg-secondary text-secondary-foreground hover:bg-muted transition-colors disabled:opacity-40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Add
           </button>

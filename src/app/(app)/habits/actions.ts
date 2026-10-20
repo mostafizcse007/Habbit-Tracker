@@ -126,6 +126,14 @@ export async function updateHabit(
   }
 
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
   const { error } = await supabase
     .from("habits")
     .update({
@@ -135,6 +143,7 @@ export async function updateHabit(
       tags: parsed.data.tags,
     })
     .eq("id", id)
+    .eq("user_id", user.id)
 
   if (error) {
     return { error: error.message }
@@ -146,15 +155,24 @@ export async function updateHabit(
 }
 
 export async function archiveHabit(id: string): Promise<HabitActionState> {
-  if (!id) {
+  if (!id || typeof id !== "string" || !id.trim()) {
     return { error: "Habit ID is required" }
   }
 
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
   const { error } = await supabase
     .from("habits")
     .update({ archived: true })
     .eq("id", id)
+    .eq("user_id", user.id)
 
   if (error) {
     return { error: error.message }
@@ -166,12 +184,24 @@ export async function archiveHabit(id: string): Promise<HabitActionState> {
 }
 
 export async function deleteHabit(id: string): Promise<HabitActionState> {
-  if (!id) {
+  if (!id || typeof id !== "string" || !id.trim()) {
     return { error: "Habit ID is required" }
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.from("habits").delete().eq("id", id)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  const { error } = await supabase
+    .from("habits")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id)
 
   if (error) {
     return { error: error.message }

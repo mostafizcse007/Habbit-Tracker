@@ -299,15 +299,19 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     prevAllDoneRef.current = isAllDone
   }, [isAllDone, isLoading])
 
-  const streaksByHabit = useMemo(() => {
-    if (!today) return {}
-    const map: Record<string, number> = {}
+  const { streaksByHabit, graceByHabit } = useMemo(() => {
+    if (!today) return { streaksByHabit: {}, graceByHabit: {} }
+    const streakMap: Record<string, number> = {}
+    const graceMap: Record<string, boolean> = {}
     for (const habit of habits) {
       const logs = logsByHabit[habit.id] ?? []
       const streaks = calculateStreaks(logs, habit.frequency, today)
-      map[habit.id] = streaks.current
+      streakMap[habit.id] = streaks.current
+      if (streaks.graceUsedThisWeek) {
+        graceMap[habit.id] = true
+      }
     }
-    return map
+    return { streaksByHabit: streakMap, graceByHabit: graceMap }
   }, [habits, logsByHabit, today])
 
   const allTags = useMemo(() => {
@@ -527,6 +531,7 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         notesByHabitDate={notesByHabitDate}
         pendingKeys={pendingKeys}
         streaksByHabit={streaksByHabit}
+        graceByHabit={graceByHabit}
         isRecent={isRecent}
         getCellState={(habit, date) =>
           cellState(habit, date, today, logsByHabit[habit.id] ?? [])

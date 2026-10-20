@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Flame, FileText } from "lucide-react"
+import { Flame, FileText, Shield } from "lucide-react"
 import type { Habit } from "@/types"
 import { parseLocalDateString } from "@/lib/dates"
 import { formatSchedule } from "@/lib/habit-schedule"
@@ -17,6 +17,7 @@ interface WeekSheetProps {
   notesByHabitDate?: Record<string, string>
   pendingKeys: Set<string>
   streaksByHabit: Record<string, number>
+  graceByHabit?: Record<string, boolean>
   getCellState: (habit: Habit, date: string) => CellState
   onToggleCell: (habit: Habit, date: string) => void
   onOpenNote?: (habit: Habit, date: string) => void
@@ -31,6 +32,7 @@ export function WeekSheet({
   notesByHabitDate,
   pendingKeys,
   streaksByHabit,
+  graceByHabit,
   getCellState,
   onToggleCell,
   onOpenNote,
@@ -134,7 +136,7 @@ export function WeekSheet({
                       <button
                         type="button"
                         onClick={() => onOpenNote(habit, today)}
-                        className="opacity-60 hover:opacity-100 size-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shrink-0"
+                        className="opacity-60 hover:opacity-100 size-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shrink-0 relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100"
                         title={
                           notesByHabitDate?.[`${habit.id}:${today}`]
                             ? `Note today: "${notesByHabitDate[`${habit.id}:${today}`]}"`
@@ -142,7 +144,7 @@ export function WeekSheet({
                         }
                         aria-label={`Note for ${habit.name}`}
                       >
-                        <FileText className="size-3.5" />
+                        <FileText className="size-3.5" aria-hidden="true" />
                       </button>
                     )}
                   </div>
@@ -189,6 +191,18 @@ export function WeekSheet({
               })}
 
               <div className="pr-6 flex items-baseline justify-end gap-[6px] self-center">
+                {graceByHabit?.[habit.id] && (
+                  <span
+                    title="Protected by automatic weekly grace day"
+                    className="inline-flex self-center"
+                  >
+                    <Shield
+                      className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0"
+                      strokeWidth={2.2}
+                      aria-label="Streak protected by grace day"
+                    />
+                  </span>
+                )}
                 {streak >= 7 && (
                   <Flame
                     className="size-4 text-foreground shrink-0 self-center"
@@ -280,7 +294,7 @@ export function WeekSheet({
                     <button
                       type="button"
                       onClick={() => onOpenNote(habit, today)}
-                      className="opacity-60 hover:opacity-100 size-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shrink-0"
+                      className="opacity-60 hover:opacity-100 size-6 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer shrink-0 relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100"
                       title={
                         notesByHabitDate?.[`${habit.id}:${today}`]
                           ? `Note today: "${notesByHabitDate[`${habit.id}:${today}`]}"`
@@ -288,12 +302,24 @@ export function WeekSheet({
                       }
                       aria-label={`Note for ${habit.name}`}
                     >
-                      <FileText className="size-3.5" />
+                      <FileText className="size-3.5" aria-hidden="true" />
                     </button>
                   )}
                 </div>
 
                 <div className="shrink-0 flex items-baseline gap-1.5">
+                  {graceByHabit?.[habit.id] && (
+                    <span
+                      title="Protected by automatic weekly grace day"
+                      className="inline-flex self-center"
+                    >
+                      <Shield
+                        className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0"
+                        strokeWidth={2.2}
+                        aria-label="Streak protected by grace day"
+                      />
+                    </span>
+                  )}
                   {streak >= 7 && (
                     <Flame
                       className="size-4 text-foreground shrink-0 self-center"

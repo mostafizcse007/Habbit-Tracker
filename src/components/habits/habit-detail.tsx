@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, FileText, Plus, Pencil } from "lucide-react"
+import { ArrowLeft, FileText, Plus, Pencil, Shield } from "lucide-react"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -196,8 +196,8 @@ export function HabitDetail({ habit }: HabitDetailProps) {
   )
 
   const streaks = useMemo(
-    () => calculateStreaks(logs, habit.frequency, today),
-    [logs, habit.frequency, today]
+    () => calculateStreaks(logs, habit.frequency, today, createdOn),
+    [logs, habit.frequency, today, createdOn]
   )
 
   const rateStats = useMemo(
@@ -353,25 +353,45 @@ export function HabitDetail({ habit }: HabitDetailProps) {
       <div className="mt-8 bg-card border border-border rounded-[14px] overflow-hidden">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border">
           <div className="bg-card p-4 sm:p-5 md:p-6">
-            <div className="flex items-baseline gap-1.5">
-              {streaks.current > 0 ? (
-                <>
-                  <StreakNumber
-                    value={streaks.current}
-                    className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums"
-                  />
-                  <span className="text-[14px] text-muted-foreground">
-                    {streaks.current === 1 ? "day" : "days"}
+            <div className="flex items-baseline justify-between gap-1">
+              <div className="flex items-baseline gap-1.5">
+                {streaks.current > 0 ? (
+                  <>
+                    <StreakNumber
+                      value={streaks.current}
+                      className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums"
+                    />
+                    <span className="text-[14px] text-muted-foreground">
+                      {streaks.current === 1 ? "day" : "days"}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground">
+                    —
                   </span>
-                </>
-              ) : (
-                <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground">
-                  —
+                )}
+              </div>
+              {streaks.graceUsedThisWeek && (
+                <span
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-full select-none"
+                  title={
+                    streaks.graceDate
+                      ? `Streak protected by 1 grace day on ${streaks.graceDate}`
+                      : "Streak protected by automatic weekly grace day"
+                  }
+                >
+                  <Shield className="size-3 shrink-0" />
+                  Grace active
                 </span>
               )}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-2">
-              Current streak
+            <div className="text-[13px] text-muted-foreground mt-2 flex items-center justify-between">
+              <span>Current streak</span>
+              {streaks.graceUsedThisWeek && streaks.graceDate && (
+                <span className="text-[11px] text-muted-foreground">
+                  Saved on {streaks.graceDate.slice(5)}
+                </span>
+              )}
             </div>
           </div>
 
@@ -398,22 +418,50 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           </div>
 
           <div className="bg-card p-4 sm:p-5 md:p-6">
-            <div className="flex items-baseline gap-0.5">
-              {rateStats.rate !== null ? (
-                <>
-                  <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums">
-                    {rateStats.rate}
+            <div className="flex items-baseline justify-between gap-1">
+              <div className="flex items-baseline gap-0.5">
+                {rateStats.rate !== null ? (
+                  <>
+                    <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground tabular-nums">
+                      {rateStats.rate}
+                    </span>
+                    <span className="text-[14px] text-muted-foreground">%</span>
+                  </>
+                ) : (
+                  <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground">
+                    —
                   </span>
-                  <span className="text-[14px] text-muted-foreground">%</span>
-                </>
-              ) : (
-                <span className="text-[36px] font-bold leading-none tracking-[-0.03em] text-foreground">
-                  —
+                )}
+              </div>
+              {streaks.momentumScore > 0 && (
+                <span
+                  className={cn(
+                    "inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full select-none",
+                    streaks.momentumLabel === "Unstoppable" &&
+                      "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25",
+                    streaks.momentumLabel === "Strong" &&
+                      "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25",
+                    streaks.momentumLabel === "Building" &&
+                      "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25",
+                    streaks.momentumLabel === "Starting" &&
+                      "bg-muted text-muted-foreground border border-border"
+                  )}
+                  title={`30-Day weighted momentum: ${streaks.momentumScore}% (${streaks.momentumLabel})`}
+                >
+                  {streaks.momentumLabel === "Unstoppable" && "🔥 "}
+                  {streaks.momentumLabel === "Strong" && "⚡ "}
+                  {streaks.momentumLabel === "Building" && "📈 "}
+                  {streaks.momentumLabel}
                 </span>
               )}
             </div>
-            <div className="text-[13px] text-muted-foreground mt-2">
-              Last 30 days
+            <div className="text-[13px] text-muted-foreground mt-2 flex items-center justify-between">
+              <span>Last 30 days</span>
+              {streaks.momentumScore > 0 && (
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  {streaks.momentumScore}% momentum
+                </span>
+              )}
             </div>
           </div>
 
@@ -615,21 +663,23 @@ export function HabitDetail({ habit }: HabitDetailProps) {
                   year: "numeric",
                 })
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={date}
                     onClick={() => setActiveNoteDate(date)}
-                    className="p-4 rounded-xl border border-border bg-background hover:border-foreground/40 transition-colors cursor-pointer group space-y-2"
+                    className="text-left w-full p-4 rounded-xl border border-border bg-background hover:border-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors cursor-pointer group space-y-2"
+                    aria-label={`Edit reflection for ${formatted}`}
                   >
                     <div className="flex items-center justify-between text-[12px] text-muted-foreground">
                       <span className="font-semibold text-foreground">{formatted}</span>
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-primary text-[12px] font-medium">
-                        <Pencil className="size-3" /> Edit
+                      <span className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity flex items-center gap-1 text-primary text-[12px] font-medium">
+                        <Pencil className="size-3" aria-hidden="true" /> Edit
                       </span>
                     </div>
                     <p className="text-[13.5px] leading-relaxed text-text-soft whitespace-pre-wrap">
                       {noteText}
                     </p>
-                  </div>
+                  </button>
                 )
               })}
           </div>

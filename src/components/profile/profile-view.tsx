@@ -550,10 +550,11 @@ export function ProfileView({
           <button
             type="button"
             onClick={() => setCoverModalOpen(true)}
-            className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md text-white text-[12px] font-medium shadow-sm transition-all border border-white/20 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/55 hover:bg-black/75 backdrop-blur-md text-white text-[12px] font-medium shadow-sm transition-all border border-white/20 cursor-pointer hover:scale-[1.02] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
             title="Customize cover banner"
+            aria-label="Customize cover banner"
           >
-            <Palette className="size-3.5" />
+            <Palette className="size-3.5" aria-hidden="true" />
             <span>Change cover</span>
           </button>
         </div>
@@ -582,15 +583,17 @@ export function ProfileView({
                     disabled={isUploadingAvatar || isRemovingAvatar}
                     className="sr-only"
                     id="hero-avatar-input"
+                    aria-label="Upload profile photo"
                   />
                   <button
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={isUploadingAvatar || isRemovingAvatar}
                     title="Change profile photo"
-                    className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
+                    aria-label="Change profile photo"
+                    className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <Camera className="size-5" />
+                    <Camera className="size-5" aria-hidden="true" />
                     <span className="text-[10px] font-semibold mt-0.5">
                       {isUploadingAvatar ? "Uploading..." : "Change"}
                     </span>
@@ -616,15 +619,16 @@ export function ProfileView({
               <button
                 type="button"
                 onClick={handleCopyHandle}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted/80 hover:bg-muted text-foreground transition-colors cursor-pointer group"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-muted/80 hover:bg-muted text-foreground transition-colors cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 title="Click to copy handle"
+                aria-label={`Copy handle ${usernameHandle}`}
               >
-                <AtSign className="size-3 text-muted-foreground group-hover:text-primary transition-colors" />
+                <AtSign className="size-3 text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true" />
                 <span>{usernameHandle}</span>
                 {copiedHandle ? (
-                  <Check className="size-3 text-emerald-500 ml-0.5" />
+                  <Check className="size-3 text-emerald-500 ml-0.5" aria-hidden="true" />
                 ) : (
-                  <Copy className="size-3 text-muted-foreground group-hover:text-foreground opacity-60 ml-0.5" />
+                  <Copy className="size-3 text-muted-foreground group-hover:text-foreground opacity-60 ml-0.5" aria-hidden="true" />
                 )}
               </button>
 
@@ -638,8 +642,9 @@ export function ProfileView({
                     type="button"
                     onClick={handleAvatarRemove}
                     disabled={isRemovingAvatar}
-                    className="text-[12px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer underline decoration-dotted"
+                    className="text-[12px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer underline decoration-dotted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xs"
                     title="Remove profile photo"
+                    aria-label="Remove profile photo"
                   >
                     {isRemovingAvatar ? "Removing..." : "Remove photo"}
                   </button>
@@ -694,47 +699,66 @@ export function ProfileView({
       </div>
 
       {/* Segmented Tab Navigation */}
-      <div className="flex items-center gap-1.5 p-1 rounded-[14px] bg-muted/70 border border-border/70 overflow-x-auto">
+      <div
+        role="tablist"
+        aria-label="Profile settings sections"
+        className="flex items-center gap-1.5 p-1 rounded-[14px] bg-muted/70 border border-border/70 overflow-x-auto"
+      >
         <button
           type="button"
+          role="tab"
+          id="tab-general"
+          aria-selected={activeTab === "general"}
+          aria-controls="panel-general"
+          tabIndex={activeTab === "general" ? 0 : -1}
           onClick={() => setActiveTab("general")}
           className={cn(
-            "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap",
+            "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             activeTab === "general"
               ? "bg-card text-foreground shadow-xs border border-border/70"
               : "text-muted-foreground hover:text-foreground hover:bg-card/50"
           )}
         >
-          <User className="size-4" />
+          <User className="size-4" aria-hidden="true" />
           General
         </button>
 
         <button
           type="button"
+          role="tab"
+          id="tab-preferences"
+          aria-selected={activeTab === "preferences"}
+          aria-controls="panel-preferences"
+          tabIndex={activeTab === "preferences" ? 0 : -1}
           onClick={() => setActiveTab("preferences")}
           className={cn(
-            "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap",
+            "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             activeTab === "preferences"
               ? "bg-card text-foreground shadow-xs border border-border/70"
               : "text-muted-foreground hover:text-foreground hover:bg-card/50"
           )}
         >
-          <Globe className="size-4" />
+          <Globe className="size-4" aria-hidden="true" />
           Time & Preferences
         </button>
 
         {!isDemo && (
           <button
             type="button"
+            role="tab"
+            id="tab-security"
+            aria-selected={activeTab === "security"}
+            aria-controls="panel-security"
+            tabIndex={activeTab === "security" ? 0 : -1}
             onClick={() => setActiveTab("security")}
             className={cn(
-              "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap",
+              "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               activeTab === "security"
                 ? "bg-card text-foreground shadow-xs border border-border/70"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/50"
             )}
           >
-            <ShieldCheck className="size-4" />
+            <ShieldCheck className="size-4" aria-hidden="true" />
             Security
           </button>
         )}
@@ -742,15 +766,20 @@ export function ProfileView({
         {!isDemo && (
           <button
             type="button"
+            role="tab"
+            id="tab-data"
+            aria-selected={activeTab === "data"}
+            aria-controls="panel-data"
+            tabIndex={activeTab === "data" ? 0 : -1}
             onClick={() => setActiveTab("data")}
             className={cn(
-              "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap",
+              "flex items-center gap-2 h-10 px-4 rounded-[10px] text-[14px] font-semibold transition-all cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               activeTab === "data"
                 ? "bg-card text-foreground shadow-xs border border-border/70"
                 : "text-muted-foreground hover:text-foreground hover:bg-card/50"
             )}
           >
-            <Download className="size-4" />
+            <Download className="size-4" aria-hidden="true" />
             Data & Privacy
           </button>
         )}
@@ -758,7 +787,12 @@ export function ProfileView({
 
       {/* Tab 1: General (Personal Details) */}
       {activeTab === "general" && (
-        <div className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-general"
+          aria-labelledby="tab-general"
+          className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-6"
+        >
           <div className="border-b border-border/70 pb-4">
             <h2 className="text-[18px] font-bold text-foreground">
               Profile Details
@@ -872,7 +906,12 @@ export function ProfileView({
 
       {/* Tab 2: Preferences (Timezone & Localization) */}
       {activeTab === "preferences" && (
-        <div className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-preferences"
+          aria-labelledby="tab-preferences"
+          className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-6"
+        >
           <div className="border-b border-border/70 pb-4">
             <h2 className="text-[18px] font-bold text-foreground">
               Time & Localization
@@ -966,7 +1005,12 @@ export function ProfileView({
 
       {/* Tab 3: Security (Password Management) */}
       {!isDemo && activeTab === "security" && (
-        <div className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-security"
+          aria-labelledby="tab-security"
+          className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-6"
+        >
           <div className="border-b border-border/70 pb-4">
             <h2 className="text-[18px] font-bold text-foreground">
               Security & Credentials
@@ -1044,7 +1088,12 @@ export function ProfileView({
 
       {/* Tab 4: Data & Privacy (Export & Danger Zone) */}
       {!isDemo && activeTab === "data" && (
-        <div className="space-y-6">
+        <div
+          role="tabpanel"
+          id="panel-data"
+          aria-labelledby="tab-data"
+          className="space-y-6"
+        >
           {/* Data Export Card */}
           <div className="rounded-[18px] border border-border bg-card shadow-sm p-6 sm:p-8 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1181,31 +1230,41 @@ export function ProfileView({
           </DialogHeader>
 
           {/* Segmented Switcher for Presets vs Custom */}
-          <div className="grid grid-cols-2 p-1 rounded-[10px] bg-muted/60 border border-border/60">
+          <div
+            role="tablist"
+            aria-label="Cover banner options"
+            className="grid grid-cols-2 p-1 rounded-[10px] bg-muted/60 border border-border/60"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={coverModalTab === "presets"}
+              tabIndex={coverModalTab === "presets" ? 0 : -1}
               onClick={() => setCoverModalTab("presets")}
               className={cn(
-                "h-8 rounded-[8px] text-[13px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                "h-8 rounded-[8px] text-[13px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 coverModalTab === "presets"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Sparkles className="size-3.5" />
+              <Sparkles className="size-3.5" aria-hidden="true" />
               Curated Themes
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={coverModalTab === "custom"}
+              tabIndex={coverModalTab === "custom" ? 0 : -1}
               onClick={() => setCoverModalTab("custom")}
               className={cn(
-                "h-8 rounded-[8px] text-[13px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                "h-8 rounded-[8px] text-[13px] font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                 coverModalTab === "custom"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <ImageIcon className="size-3.5" />
+              <ImageIcon className="size-3.5" aria-hidden="true" />
               Custom Image
             </button>
           </div>
@@ -1221,8 +1280,10 @@ export function ProfileView({
                     key={preset.id}
                     type="button"
                     onClick={() => handleSelectPreset(preset.id)}
+                    aria-pressed={isSelected}
+                    aria-label={`Select ${preset.name} theme`}
                     className={cn(
-                      "p-3 rounded-[12px] border text-left transition-all cursor-pointer relative group flex flex-col justify-between h-[96px] overflow-hidden",
+                      "p-3 rounded-[12px] border text-left transition-all cursor-pointer relative group flex flex-col justify-between h-[96px] overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isSelected
                         ? "border-primary ring-2 ring-primary/20 bg-primary/5"
                         : "border-border/70 hover:border-border bg-muted/20 hover:bg-muted/40"
@@ -1242,7 +1303,7 @@ export function ProfileView({
                         </span>
                       </div>
                       {isSelected && (
-                        <Check className="size-4 text-primary shrink-0" />
+                        <Check className="size-4 text-primary shrink-0" aria-hidden="true" />
                       )}
                     </div>
                   </button>
@@ -1271,7 +1332,7 @@ export function ProfileView({
                       disabled={isUploadingCover}
                       className="cursor-pointer text-[13px]"
                     >
-                      <UploadCloud className="size-3.5 mr-1.5" />
+                      <UploadCloud className="size-3.5 mr-1.5" aria-hidden="true" />
                       {isUploadingCover ? "Uploading..." : "Replace image"}
                     </Button>
                     <Button
@@ -1281,17 +1342,19 @@ export function ProfileView({
                       onClick={handleResetCover}
                       className="cursor-pointer text-[13px] text-destructive hover:bg-destructive/10"
                     >
-                      <Trash2 className="size-3.5 mr-1.5" />
+                      <Trash2 className="size-3.5 mr-1.5" aria-hidden="true" />
                       Reset to default
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div
+                <button
+                  type="button"
                   onClick={() => coverInputRef.current?.click()}
-                  className="border-2 border-dashed border-border/80 hover:border-primary/60 rounded-[14px] p-8 text-center cursor-pointer transition-colors bg-muted/20 hover:bg-muted/40 flex flex-col items-center justify-center space-y-2"
+                  className="w-full border-2 border-dashed border-border/80 hover:border-primary/60 rounded-[14px] p-8 text-center cursor-pointer transition-colors bg-muted/20 hover:bg-muted/40 flex flex-col items-center justify-center space-y-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label="Upload custom cover banner"
                 >
-                  <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                  <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center" aria-hidden="true">
                     <UploadCloud className="size-5" />
                   </div>
                   <div className="space-y-0.5">
@@ -1304,7 +1367,7 @@ export function ProfileView({
                       PNG, JPEG, or WebP up to 5 MB. Wide images work best.
                     </p>
                   </div>
-                </div>
+                </button>
               )}
 
               <input
@@ -1314,6 +1377,7 @@ export function ProfileView({
                 onChange={handleCustomCoverUpload}
                 disabled={isUploadingCover}
                 className="sr-only"
+                aria-label="Upload custom cover banner file"
               />
             </div>
           )}

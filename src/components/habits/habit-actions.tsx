@@ -74,7 +74,7 @@ export function HabitActions({
               disabled={isPending}
               aria-label={`Options for ${habit.name}`}
             >
-              <MoreHorizontalIcon className="size-4" />
+              <MoreHorizontalIcon className="size-4" aria-hidden="true" />
             </button>
           }
         />

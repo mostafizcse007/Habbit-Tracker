@@ -13,8 +13,8 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       aria-label="Toggle theme"
     >
-      <SunIcon className="size-[18px] stroke-2 dark:hidden" />
-      <MoonIcon className="hidden size-[18px] stroke-2 dark:block" />
+      <SunIcon className="size-[18px] stroke-2 dark:hidden" aria-hidden="true" />
+      <MoonIcon className="hidden size-[18px] stroke-2 dark:block" aria-hidden="true" />
     </button>
   )
 }

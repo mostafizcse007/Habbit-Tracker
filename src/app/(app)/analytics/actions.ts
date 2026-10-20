@@ -15,6 +15,7 @@ import {
   summarizeWindow,
 } from "@/lib/review"
 import { AiError, generateText } from "@/lib/ai"
+import { logger } from "@/lib/logger"
 
 export type GenerateWeeklyReviewResult =
   | { error: string }
@@ -102,13 +103,13 @@ export async function generateWeeklyReview(
     .order("created_at", { ascending: true })
 
   if (habitsError || !habits) {
-    console.error("generateWeeklyReview habits query error:", habitsError)
+    logger.error("WeeklyReview", "habits query error", { error: habitsError })
     return { error: "Could not write your review right now. Try again later." }
   }
 
   const { data: logsData, error: logsError } = await fetchAllLogs(supabase)
   if (logsError || !logsData) {
-    console.error("generateWeeklyReview logs query error:", logsError)
+    logger.error("WeeklyReview", "logs query error", { error: logsError })
     return { error: "Could not write your review right now. Try again later." }
   }
 
@@ -176,7 +177,7 @@ export async function generateWeeklyReview(
       prompt,
     })
   } catch (err) {
-    console.error("generateWeeklyReview AI generation error:", err)
+    logger.error("WeeklyReview", "AI generation error", { error: err })
     if (err instanceof AiError && err.kind === "rate_limited") {
       return {
         error: "The AI service is busy right now. Try again in a minute.",
@@ -201,7 +202,7 @@ export async function generateWeeklyReview(
       .single()
 
     if (updateError || !updated) {
-      console.error("generateWeeklyReview weekly_reviews update error:", updateError)
+      logger.error("WeeklyReview", "weekly_reviews update error", { error: updateError })
       return {
         error: "Could not write your review right now. Try again later.",
       }
@@ -229,7 +230,7 @@ export async function generateWeeklyReview(
     .single()
 
   if (insertError) {
-    console.error("generateWeeklyReview weekly_reviews insert error:", insertError)
+    logger.error("WeeklyReview", "weekly_reviews insert error", { error: insertError })
     if (insertError.code === "23505") {
       const { data: fallbackRow } = await supabase
         .from("weekly_reviews")
@@ -253,7 +254,7 @@ export async function generateWeeklyReview(
   }
 
   if (!inserted) {
-    console.error("generateWeeklyReview: inserted is null")
+    logger.error("WeeklyReview", "inserted is null")
     return { error: "Could not write your review right now. Try again later." }
   }
 

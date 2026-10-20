@@ -74,7 +74,7 @@ export function SmartNudgeCard({
               className="inline-flex items-center gap-1 text-[12.5px] font-medium text-foreground hover:underline"
             >
               View habit
-              <ArrowRight className="size-3" />
+              <ArrowRight className="size-3" aria-hidden="true" />
             </Link>
           </div>
         )}
@@ -83,10 +83,10 @@ export function SmartNudgeCard({
       <button
         type="button"
         onClick={() => onDismiss(nudge.id)}
-        className="absolute top-3 right-3 size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+        className="absolute top-3 right-3 size-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer relative after:size-[44px] after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
         aria-label="Dismiss smart nudge"
       >
-        <X className="size-4" />
+        <X className="size-4" aria-hidden="true" />
       </button>
     </aside>
   )

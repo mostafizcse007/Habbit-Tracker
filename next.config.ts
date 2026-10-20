@@ -11,6 +11,7 @@ if (supabaseUrl) {
 }
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
   allowedDevOrigins: [
     "192.168.0.102",
     "192.168.*.*",
@@ -62,6 +63,14 @@ const nextConfig: NextConfig = {
           {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
           },
           {
             key: "Permissions-Policy",

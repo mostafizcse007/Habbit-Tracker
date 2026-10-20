@@ -266,6 +266,7 @@ export async function exportUserData(): Promise<{
     habits: unknown[]
     logs: unknown[]
     reviews: unknown[]
+    achievements: unknown[]
     exported_at: string
   }
   error?: string
@@ -279,12 +280,14 @@ export async function exportUserData(): Promise<{
     return { error: "Not signed in" }
   }
 
-  const [profileRes, habitsRes, logsRes, reviewsRes] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase.from("habits").select("*").eq("user_id", user.id),
-    supabase.from("habit_logs").select("*").eq("user_id", user.id),
-    supabase.from("weekly_reviews").select("*").eq("user_id", user.id),
-  ])
+  const [profileRes, habitsRes, logsRes, reviewsRes, achievementsRes] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.from("habits").select("*").eq("user_id", user.id),
+      supabase.from("habit_logs").select("*").eq("user_id", user.id),
+      supabase.from("weekly_reviews").select("*").eq("user_id", user.id),
+      supabase.from("user_achievements").select("*").eq("user_id", user.id),
+    ])
 
   return {
     data: {
@@ -292,6 +295,7 @@ export async function exportUserData(): Promise<{
       habits: habitsRes.data ?? [],
       logs: logsRes.data ?? [],
       reviews: reviewsRes.data ?? [],
+      achievements: achievementsRes.data ?? [],
       exported_at: new Date().toISOString(),
     },
   }

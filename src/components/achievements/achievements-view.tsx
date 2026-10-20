@@ -216,6 +216,7 @@ export function AchievementsView({
                       "size-6 shrink-0 stroke-2",
                       isUnlocked ? "text-foreground" : "text-muted-foreground"
                     )}
+                    aria-hidden="true"
                   />
                 )}
                 <div className="min-w-0 flex-1">

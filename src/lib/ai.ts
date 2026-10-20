@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger"
+
 export type AiErrorKind = "rate_limited" | "failed"
 
 export class AiError extends Error {
@@ -67,7 +69,7 @@ export async function generateText({
       throw err
     }
     const isAbort = (err as { name?: string })?.name === "AbortError"
-    console.error(`AI network request failed (${isAbort ? "timeout" : "error"}):`, err)
+    logger.error("AI", `AI network request failed (${isAbort ? "timeout" : "error"})`, { error: err })
     throw new AiError("failed", isAbort ? "AI request timed out" : "AI network request failed")
   } finally {
     clearTimeout(timeoutId)
@@ -79,7 +81,7 @@ export async function generateText({
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "")
-    console.error(`AI generation failed (${response.status}):`, errorBody)
+    logger.error("AI", `AI generation failed (${response.status})`, { status: response.status, body: errorBody })
     throw new AiError("failed", `AI generation failed (${response.status})`)
   }
 
@@ -87,7 +89,7 @@ export async function generateText({
   try {
     data = (await response.json()) as GeminiResponse
   } catch (err) {
-    console.error("AI response parsing failed:", err)
+    logger.error("AI", "AI response parsing failed", { error: err })
     throw new AiError("failed", "AI response parsing failed")
   }
 
@@ -95,7 +97,7 @@ export async function generateText({
   const text = parts.map((part) => part.text ?? "").join("").trim()
 
   if (!text) {
-    console.error("AI returned empty content. Full response:", JSON.stringify(data))
+    logger.error("AI", "AI returned empty content", { rawResponse: data })
     throw new AiError("failed", "AI returned empty content")
   }
 

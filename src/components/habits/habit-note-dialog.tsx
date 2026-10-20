@@ -95,7 +95,11 @@ function HabitNoteForm({
 
       <div className="mt-4 space-y-3">
         <div className="relative">
+          <label htmlFor="daily-habit-note-input" className="sr-only">
+            Daily note for {habit.name} on {formattedDate}
+          </label>
           <textarea
+            id="daily-habit-note-input"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="How did this habit go today? Any obstacles or wins..."
@@ -114,7 +118,7 @@ function HabitNoteForm({
               type="button"
               onClick={handleDelete}
               disabled={isSaving}
-              className="text-[13px] font-medium text-destructive hover:underline cursor-pointer disabled:opacity-50"
+              className="text-[13px] font-medium text-destructive hover:underline cursor-pointer disabled:opacity-50 min-h-[36px] inline-flex items-center rounded-sm px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               Delete note
             </button>
