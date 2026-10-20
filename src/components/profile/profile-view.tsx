@@ -32,6 +32,8 @@ import {
   Image as ImageIcon,
   UploadCloud,
   Trash2,
+  Maximize2,
+  Crop,
 } from "lucide-react"
 import type { Profile } from "@/types"
 import { Avatar } from "@/components/avatar"
@@ -478,7 +480,11 @@ export function ProfileView({
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath)
 
-      const remoteConfig: CoverConfig = { type: "custom", customUrl: publicUrl }
+      const remoteConfig: CoverConfig = {
+        type: "custom",
+        customUrl: publicUrl,
+        fit: "contain",
+      }
       setCoverConfig(remoteConfig)
       const res = await updateCoverConfig(remoteConfig)
       if (res && res.error) {
@@ -492,6 +498,23 @@ export function ProfileView({
     } finally {
       if (coverInputRef.current) coverInputRef.current.value = ""
       setIsUploadingCover(false)
+    }
+  }
+
+  const handleUpdateFit = async (fit: "contain" | "cover") => {
+    if (coverConfig.type !== "custom") return
+    const newConfig: CoverConfig = { ...coverConfig, fit }
+    setCoverConfig(newConfig)
+    toast.success(
+      fit === "contain"
+        ? "Display set to Fit Whole Image (no cutoffs)."
+        : "Display set to Fill Banner."
+    )
+    const res = await updateCoverConfig(newConfig)
+    if (res?.error) {
+      toast.error(`Sync error: ${res.error}`)
+    } else {
+      router.refresh()
     }
   }
 
@@ -577,12 +600,31 @@ export function ProfileView({
         {/* Ambient mesh cover banner with customizable style */}
         <div suppressHydrationWarning className="h-36 sm:h-44 md:h-48 w-full relative overflow-hidden group">
           {coverConfig.type === "custom" && coverConfig.customUrl ? (
-            <div
-              suppressHydrationWarning
-              className="size-full bg-cover bg-center transition-all duration-300"
-              style={{ backgroundImage: `url(${coverConfig.customUrl})` }}
-            >
-              <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px]" />
+            <div className="size-full relative overflow-hidden bg-muted/40">
+              {coverConfig.fit === "cover" ? (
+                <div
+                  suppressHydrationWarning
+                  className="size-full bg-cover bg-center transition-all duration-300"
+                  style={{ backgroundImage: `url(${coverConfig.customUrl})` }}
+                >
+                  <div className="absolute inset-0 bg-black/20 backdrop-blur-[0.5px]" />
+                </div>
+              ) : (
+                <div className="size-full relative flex items-center justify-center overflow-hidden">
+                  {/* Ambient blurred backdrop for letterbox areas */}
+                  <div
+                    className="absolute inset-0 bg-cover bg-center blur-xl scale-125 opacity-40 brightness-75 transition-all duration-300"
+                    style={{ backgroundImage: `url(${coverConfig.customUrl})` }}
+                  />
+                  <div className="absolute inset-0 bg-black/20" />
+                  {/* Full image displayed without any horizontal or vertical cropping */}
+                  <img
+                    src={coverConfig.customUrl}
+                    alt="Custom cover banner"
+                    className="size-full object-contain relative z-10 transition-all duration-300 select-none pointer-events-none"
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <div
@@ -1367,16 +1409,80 @@ export function ProfileView({
             <div className="space-y-4">
               {coverConfig.type === "custom" && coverConfig.customUrl ? (
                 <div className="space-y-3">
-                  <div
-                    className="relative h-28 w-full rounded-[12px] overflow-hidden border border-border bg-cover bg-center"
-                    style={{ backgroundImage: `url(${coverConfig.customUrl})` }}
-                  >
-                    <div className="absolute inset-0 bg-black/20" />
-                    <span className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full text-[11px] font-medium bg-black/60 text-white backdrop-blur-xs">
-                      Active custom banner
+                  <div className="relative h-28 w-full rounded-[12px] overflow-hidden border border-border bg-muted/40 flex items-center justify-center">
+                    {coverConfig.fit === "cover" ? (
+                      <div
+                        className="size-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${coverConfig.customUrl})` }}
+                      >
+                        <div className="absolute inset-0 bg-black/20" />
+                      </div>
+                    ) : (
+                      <>
+                        <div
+                          className="absolute inset-0 bg-cover bg-center blur-md scale-110 opacity-40 brightness-75"
+                          style={{ backgroundImage: `url(${coverConfig.customUrl})` }}
+                        />
+                        <div className="absolute inset-0 bg-black/20" />
+                        <img
+                          src={coverConfig.customUrl}
+                          alt="Cover preview"
+                          className="size-full object-contain relative z-10 select-none pointer-events-none"
+                        />
+                      </>
+                    )}
+                    <span className="absolute bottom-2 left-2 z-20 px-2.5 py-1 rounded-full text-[11px] font-medium bg-black/60 text-white backdrop-blur-xs">
+                      {coverConfig.fit === "cover" ? "Fill banner" : "Fit whole image"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
+
+                  {/* Display Mode Selection */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <label className="text-[12px] font-medium text-muted-foreground block">
+                      Display style across mobile & desktop
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateFit("contain")}
+                        className={cn(
+                          "p-2.5 rounded-[10px] border text-left cursor-pointer transition-all flex flex-col gap-0.5",
+                          (coverConfig.fit ?? "contain") === "contain"
+                            ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                            : "border-border/70 hover:border-border text-muted-foreground hover:text-foreground bg-muted/20"
+                        )}
+                      >
+                        <span className="text-[13px] flex items-center gap-1.5">
+                          <Maximize2 className="size-3.5" aria-hidden="true" />
+                          Fit whole image
+                        </span>
+                        <span className="text-[11px] opacity-80 font-normal">
+                          Shows 100% of banner (no cutoffs)
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleUpdateFit("cover")}
+                        className={cn(
+                          "p-2.5 rounded-[10px] border text-left cursor-pointer transition-all flex flex-col gap-0.5",
+                          coverConfig.fit === "cover"
+                            ? "border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary/30"
+                            : "border-border/70 hover:border-border text-muted-foreground hover:text-foreground bg-muted/20"
+                        )}
+                      >
+                        <span className="text-[13px] flex items-center gap-1.5">
+                          <Crop className="size-3.5" aria-hidden="true" />
+                          Fill banner
+                        </span>
+                        <span className="text-[11px] opacity-80 font-normal">
+                          Crops edges to fill frame
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 pt-1">
                     <Button
                       type="button"
                       variant="outline"
