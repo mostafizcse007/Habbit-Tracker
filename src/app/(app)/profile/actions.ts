@@ -301,3 +301,35 @@ export async function exportUserData(): Promise<{
   }
 }
 
+export type CoverConfig =
+  | { type: "preset"; presetId: string }
+  | { type: "custom"; customUrl: string }
+
+export async function updateCoverConfig(
+  config: CoverConfig
+): Promise<{ error?: string; success?: boolean }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "Not signed in" }
+  }
+
+  if (isDemoUser(user)) {
+    return { success: true }
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    data: { cover_config: config },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath("/profile")
+  return { success: true }
+}
+

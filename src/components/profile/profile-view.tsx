@@ -40,8 +40,10 @@ import {
   updateProfile,
   updatePassword,
   updateAvatar,
+  updateCoverConfig,
   deleteAccount,
   exportUserData,
+  type CoverConfig,
 } from "@/app/(app)/profile/actions"
 import { leaveDemo } from "@/app/(auth)/actions"
 import {
@@ -139,6 +141,7 @@ interface ProfileViewProps {
     id: string
     email: string
     created_at: string
+    user_metadata?: Record<string, unknown>
   }
   profile: Profile | null
   habitsCount: number
@@ -213,6 +216,15 @@ export function ProfileView({
     useState<string>("")
   const [isExporting, setIsExporting] = useState(false)
 
+  // Initial server-side cover from account user_metadata
+  const initialServerCover = useMemo<CoverConfig>(() => {
+    const meta = user.user_metadata?.cover_config as CoverConfig | undefined
+    if (meta && (meta.type === "preset" || meta.type === "custom")) {
+      return meta
+    }
+    return DEFAULT_COVER
+  }, [user.user_metadata])
+
   // Cover banner state with useSyncExternalStore for hydration-safe reactive sync
   const savedCoverJson = useSyncExternalStore(
     subscribeCover,
@@ -226,14 +238,28 @@ export function ProfileView({
     () => null
   )
 
-  const coverConfig = useMemo(() => {
-    if (!savedCoverJson) return DEFAULT_COVER
-    try {
-      return JSON.parse(savedCoverJson)
-    } catch {
-      return DEFAULT_COVER
+  const coverConfig = useMemo<CoverConfig>(() => {
+    if (savedCoverJson) {
+      try {
+        return JSON.parse(savedCoverJson)
+      } catch {}
     }
-  }, [savedCoverJson])
+    return initialServerCover
+  }, [savedCoverJson, initialServerCover])
+
+  // Seed localStorage from server user_metadata if absent
+  useEffect(() => {
+    try {
+      const existing = localStorage.getItem(`habit_cover_${user.id}`)
+      if (!existing && user.user_metadata?.cover_config) {
+        localStorage.setItem(
+          `habit_cover_${user.id}`,
+          JSON.stringify(user.user_metadata.cover_config)
+        )
+        window.dispatchEvent(new Event("habit_cover_updated"))
+      }
+    } catch {}
+  }, [user.id, user.user_metadata])
 
   const [coverModalOpen, setCoverModalOpen] = useState(false)
   const [coverModalTab, setCoverModalTab] = useState<"presets" | "custom">(
@@ -361,14 +387,15 @@ export function ProfileView({
     })
   }
 
-  const handleSelectPreset = (presetId: string) => {
-    const newConfig = { type: "preset" as const, presetId }
+  const handleSelectPreset = async (presetId: string) => {
+    const newConfig: CoverConfig = { type: "preset", presetId }
     try {
       localStorage.setItem(`habit_cover_${user.id}`, JSON.stringify(newConfig))
       window.dispatchEvent(new Event("habit_cover_updated"))
     } catch {}
     const found = COVER_PRESETS.find((p) => p.id === presetId)
     toast.success(`Cover theme set to ${found?.name ?? "preset"}.`)
+    await updateCoverConfig(newConfig)
   }
 
   const handleCustomCoverUpload = async (
@@ -394,11 +421,11 @@ export function ProfileView({
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
       if (dataUrl) {
-        const newConfig = { type: "custom" as const, customUrl: dataUrl }
+        const previewConfig: CoverConfig = { type: "custom", customUrl: dataUrl }
         try {
           localStorage.setItem(
             `habit_cover_${user.id}`,
-            JSON.stringify(newConfig)
+            JSON.stringify(previewConfig)
           )
           window.dispatchEvent(new Event("habit_cover_updated"))
         } catch {}
@@ -407,7 +434,7 @@ export function ProfileView({
     }
     reader.readAsDataURL(file)
 
-    // 2. Concurrently persist to Supabase storage in background
+    // 2. Concurrently persist to Supabase storage and sync to account across all devices
     try {
       let extension = "png"
       if (file.type === "image/jpeg") extension = "jpg"
@@ -427,14 +454,15 @@ export function ProfileView({
           data: { publicUrl },
         } = supabase.storage.from("avatars").getPublicUrl(filePath)
 
-        const newConfig = { type: "custom" as const, customUrl: publicUrl }
+        const remoteConfig: CoverConfig = { type: "custom", customUrl: publicUrl }
         try {
           localStorage.setItem(
             `habit_cover_${user.id}`,
-            JSON.stringify(newConfig)
+            JSON.stringify(remoteConfig)
           )
           window.dispatchEvent(new Event("habit_cover_updated"))
         } catch {}
+        await updateCoverConfig(remoteConfig)
       }
     } catch {
       // Local preview already applied seamlessly
@@ -444,13 +472,14 @@ export function ProfileView({
     }
   }
 
-  const handleResetCover = () => {
-    const newConfig = { type: "preset" as const, presetId: "aurora" }
+  const handleResetCover = async () => {
+    const newConfig: CoverConfig = { type: "preset", presetId: "aurora" }
     try {
       localStorage.setItem(`habit_cover_${user.id}`, JSON.stringify(newConfig))
       window.dispatchEvent(new Event("habit_cover_updated"))
     } catch {}
     toast.success("Cover reset to Aurora Bloom.")
+    await updateCoverConfig(newConfig)
   }
 
   const handleCopyHandle = () => {
@@ -536,8 +565,9 @@ export function ProfileView({
               className="size-full relative transition-all duration-300"
               style={{
                 background:
-                  COVER_PRESETS.find((p) => p.id === coverConfig.presetId)?.gradient ??
-                  COVER_PRESETS[0].gradient,
+                  (coverConfig.type === "preset"
+                    ? COVER_PRESETS.find((p) => p.id === coverConfig.presetId)?.gradient
+                    : null) ?? COVER_PRESETS[0].gradient,
               }}
             >
               <div className="absolute inset-0 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
