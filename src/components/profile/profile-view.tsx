@@ -369,7 +369,6 @@ export function ProfileView({
     } catch {}
     const found = COVER_PRESETS.find((p) => p.id === presetId)
     toast.success(`Cover theme set to ${found?.name ?? "preset"}.`)
-    setCoverModalOpen(false)
   }
 
   const handleCustomCoverUpload = async (
@@ -390,7 +389,7 @@ export function ProfileView({
 
     setIsUploadingCover(true)
 
-    // 1. Immediately read and apply locally, then auto-close modal without waiting for Done button
+    // 1. Immediately read and display preview in the modal
     const reader = new FileReader()
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string
@@ -403,8 +402,7 @@ export function ProfileView({
           )
           window.dispatchEvent(new Event("habit_cover_updated"))
         } catch {}
-        toast.success("Cover image updated.")
-        setCoverModalOpen(false)
+        toast.success("Cover image uploaded.")
       }
     }
     reader.readAsDataURL(file)
@@ -453,7 +451,6 @@ export function ProfileView({
       window.dispatchEvent(new Event("habit_cover_updated"))
     } catch {}
     toast.success("Cover reset to Aurora Bloom.")
-    setCoverModalOpen(false)
   }
 
   const handleCopyHandle = () => {
@@ -1397,11 +1394,9 @@ export function ProfileView({
               render={
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-3 rounded-[8px] text-[12px] text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="h-9 px-4 rounded-[8px] text-[13px] font-semibold cursor-pointer"
                 >
-                  Close
+                  Done
                 </Button>
               }
             />
