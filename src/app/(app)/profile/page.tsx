@@ -66,7 +66,7 @@ export default async function ProfilePage() {
   if (metaCover && (metaCover.type === "preset" || metaCover.type === "custom")) {
     initialCover = metaCover
   } else if (coverUrl) {
-    initialCover = { type: "custom", customUrl: coverUrl, fit: "contain" }
+    initialCover = { type: "custom", customUrl: coverUrl }
   } else if (coverPreset) {
     initialCover = { type: "preset", presetId: coverPreset }
   }

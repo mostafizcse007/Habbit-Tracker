@@ -303,7 +303,7 @@ export async function exportUserData(): Promise<{
 
 export type CoverConfig =
   | { type: "preset"; presetId: string }
-  | { type: "custom"; customUrl: string; fit?: "cover" | "contain" }
+  | { type: "custom"; customUrl: string }
 
 export async function updateCoverConfig(
   config: CoverConfig
