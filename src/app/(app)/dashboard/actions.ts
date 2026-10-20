@@ -5,11 +5,38 @@ import { createClient } from "@/lib/supabase/server"
 import { addDaysToDateString } from "@/lib/dates"
 import { getTodayInTimeZone, isValidTimeZone } from "@/lib/timezone"
 
+import { calculateStreaks, calculateCompletionRate } from "@/lib/streaks"
+
+function formatDateInTimeZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+}
+
+export interface ToggleHabitLogSuccess {
+  success: true
+  habitId: string
+  currentStreak: number
+  longestStreak: number
+  rawCurrent: number
+  completionRate: number | null
+  completedWeek: number
+  scheduledWeek: number
+  logs: string[]
+}
+
+export type ToggleHabitLogResult =
+  | { error: string }
+  | ToggleHabitLogSuccess
+
 export async function toggleHabitLog(
   habitId: string,
   date: string,
   completed: boolean
-): Promise<{ error: string } | { success: true }> {
+): Promise<ToggleHabitLogResult> {
   if (!habitId || typeof habitId !== "string" || habitId.trim() === "") {
     return { error: "Invalid habit ID" }
   }
@@ -83,7 +110,52 @@ export async function toggleHabitLog(
   }
 
   revalidatePath("/dashboard")
-  return { success: true }
+  revalidatePath("/analytics")
+  revalidatePath("/achievements")
+  revalidatePath("/profile")
+  revalidatePath("/habits")
+  revalidatePath(`/habits/${habitId}`)
+
+  // Fetch updated habit details and logs to recalculate metrics
+  const { data: habit } = await supabase
+    .from("habits")
+    .select("id, frequency, created_at")
+    .eq("id", habitId)
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  const { data: habitLogsData } = await supabase
+    .from("habit_logs")
+    .select("completed_on")
+    .eq("habit_id", habitId)
+    .eq("user_id", user.id)
+
+  const habitLogs = (habitLogsData ?? []).map((l) => l.completed_on)
+  const frequency = habit?.frequency ?? [0, 1, 2, 3, 4, 5, 6]
+  const createdOn = habit?.created_at
+    ? formatDateInTimeZone(new Date(habit.created_at), tz)
+    : undefined
+
+  const streaks = calculateStreaks(habitLogs, frequency, todayInTz, createdOn)
+  const rateStats = calculateCompletionRate(
+    habitLogs,
+    frequency,
+    createdOn ?? addDaysToDateString(todayInTz, -6),
+    todayInTz,
+    7
+  )
+
+  return {
+    success: true,
+    habitId,
+    currentStreak: streaks.current,
+    longestStreak: streaks.longest,
+    rawCurrent: streaks.rawCurrent,
+    completionRate: rateStats.rate,
+    completedWeek: rateStats.completed,
+    scheduledWeek: rateStats.scheduled,
+    logs: habitLogs,
+  }
 }
 
 export async function saveHabitNote(
@@ -143,6 +215,9 @@ export async function saveHabitNote(
   }
 
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
+  revalidatePath("/achievements")
+  revalidatePath("/habits")
   revalidatePath(`/habits/${habitId}`)
   return { success: true }
 }

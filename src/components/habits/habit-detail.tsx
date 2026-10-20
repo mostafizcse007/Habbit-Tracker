@@ -129,8 +129,13 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           next ? prev.filter((d) => d !== date) : [...prev, date]
         )
         toast.error("Could not update that day. Try again.")
-      } else if (next) {
-        scheduleCheck()
+      } else {
+        if (result && "success" in result && "logs" in result && result.logs) {
+          setLogs(result.logs)
+        }
+        if (next) {
+          scheduleCheck()
+        }
       }
     } catch {
       setLogs((prev) =>

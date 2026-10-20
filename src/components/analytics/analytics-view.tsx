@@ -135,7 +135,7 @@ export function AnalyticsView({
   const [today, setToday] = useState<string>("")
   const [logsByHabit, setLogsByHabit] = useState<Record<string, string[]>>({})
   const [isLoading, setIsLoading] = useState(true)
-  const [range, setRange] = useState<7 | 30 | 90>(30)
+  const [range, setRange] = useState<7 | 30 | 90 | "all">(30)
   const [breakdownView, setBreakdownView] = useState<"habit" | "tag">("habit")
 
   const [review, setReview] = useState<WeeklyReviewData | null>(
@@ -216,10 +216,38 @@ export function AnalyticsView({
     }))
   }, [habits])
 
+  const earliestDate = useMemo(() => {
+    if (!today) return ""
+    let earliest = today
+    for (const h of habits) {
+      const d = getLocalDateString(new Date(h.created_at))
+      if (d < earliest) earliest = d
+    }
+    for (const logs of Object.values(logsByHabit)) {
+      for (const d of logs) {
+        if (d < earliest) earliest = d
+      }
+    }
+    return earliest
+  }, [habits, logsByHabit, today])
+
   const startDate = useMemo(() => {
     if (!today) return ""
+    if (range === "all") return earliestDate
     return addDaysToDateString(today, -(range - 1))
-  }, [today, range])
+  }, [today, range, earliestDate])
+
+  const effectiveDays = useMemo(() => {
+    if (range !== "all") return range
+    if (!startDate || !today) return 30
+    const startObj = parseLocalDateString(startDate)
+    const todayObj = parseLocalDateString(today)
+    const diff = Math.max(
+      1,
+      Math.round((todayObj.getTime() - startObj.getTime()) / 86400000) + 1
+    )
+    return diff
+  }, [range, startDate, today])
 
   const dailyPoints = useMemo(() => {
     if (!today || !startDate) return []
@@ -262,6 +290,7 @@ export function AnalyticsView({
         tagMap.set(tag, current)
       }
     }
+
     return Array.from(tagMap.entries())
       .map(([tag, data]) => ({
         tag,
@@ -278,21 +307,21 @@ export function AnalyticsView({
 
   const weekdayTotals = useMemo(() => {
     if (!today) return []
-    return getWeekdayTotals(habitInputs, logsByHabit, range, today)
-  }, [habitInputs, logsByHabit, range, today])
+    return getWeekdayTotals(habitInputs, logsByHabit, effectiveDays, today)
+  }, [habitInputs, logsByHabit, effectiveDays, today])
 
   const highlights = useMemo(() => {
     if (!today) return []
     return buildHighlights({
       habits: habitInputs,
       logsByHabit,
-      days: range,
+      days: effectiveDays,
       today,
       habitBreakdown,
       weekdayTotals,
       currentSummary: summary,
     })
-  }, [habitInputs, logsByHabit, range, today, habitBreakdown, weekdayTotals, summary])
+  }, [habitInputs, logsByHabit, effectiveDays, today, habitBreakdown, weekdayTotals, summary])
 
   const longestStreakData = useMemo(() => {
     if (!today) return { max: 0, habitName: "" }
@@ -310,6 +339,13 @@ export function AnalyticsView({
   }, [habits, logsByHabit, today])
 
   const checkInsCount = useMemo(() => {
+    if (range === "all") {
+      let count = 0
+      for (const h of habits) {
+        count += (logsByHabit[h.id] ?? []).length
+      }
+      return count
+    }
     if (!startDate || !today) return 0
     let count = 0
     for (const h of habits) {
@@ -320,10 +356,10 @@ export function AnalyticsView({
       }
     }
     return count
-  }, [habits, logsByHabit, startDate, today])
+  }, [range, habits, logsByHabit, startDate, today])
 
   const chartData = useMemo(() => {
-    if (range === 90) {
+    if (range === 90 || (range === "all" && dailyPoints.length > 35)) {
       return weeklyPoints.map((p) => ({
         date: p.weekStart,
         rate: p.rate,
@@ -521,8 +557,9 @@ export function AnalyticsView({
         </div>
 
         <div className="border border-border rounded-[10px] p-1 inline-flex gap-1 self-start md:self-auto">
-          {([7, 30, 90] as const).map((r) => {
+          {([7, 30, 90, "all"] as const).map((r) => {
             const isSelected = range === r
+            const label = r === "all" ? "All time" : `${r} days`
             return (
               <button
                 key={r}
@@ -536,7 +573,7 @@ export function AnalyticsView({
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {r} days
+                {label}
               </button>
             )
           })}
@@ -758,7 +795,7 @@ export function AnalyticsView({
             </p>
           </div>
           <span className="text-[14px] text-muted-foreground">
-            {range} days
+            {range === "all" ? "All time" : `${range} days`}
           </span>
         </div>
 
@@ -769,7 +806,11 @@ export function AnalyticsView({
         ) : (
           <div
             role="img"
-            aria-label={`Completion rate over the last ${range} days: averaging ${summary.rate ?? 0}%, with ${summary.completed} of ${summary.scheduled} check-ins completed`}
+            aria-label={
+              range === "all"
+                ? `Completion rate all-time: averaging ${summary.rate ?? 0}%, with ${summary.completed} of ${summary.scheduled} check-ins completed`
+                : `Completion rate over the last ${range} days: averaging ${summary.rate ?? 0}%, with ${summary.completed} of ${summary.scheduled} check-ins completed`
+            }
             className="w-full h-[220px] md:h-[260px] mt-6 min-w-0"
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -851,7 +892,7 @@ export function AnalyticsView({
             </div>
           </div>
           <span className="text-[14px] text-muted-foreground">
-            Last {range} days
+            {range === "all" ? "All time" : `Last ${range} days`}
           </span>
         </div>
 
@@ -972,7 +1013,7 @@ export function AnalyticsView({
         rates={weekdayTotals}
         color="var(--foreground)"
         caption={weekdayCaption}
-        daysLabel={`Last ${range} days`}
+        daysLabel={range === "all" ? "All time" : `Last ${range} days`}
         isScheduled={(weekday) =>
           habits.some((h) => h.frequency.includes(weekday))
         }

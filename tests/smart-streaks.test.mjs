@@ -52,114 +52,74 @@ function calculateStreaks(logDates, frequency, today, createdOn) {
     }
   }
 
-  // 1. Calculate traditional longest streak (historical forward pass)
+  // 1. Calculate contiguous current streak (walking backward from today)
+  let currentStreak = 0
+  let checkDate = today
+  const todayWeekday = getLocalWeekday(parseLocalDateString(today))
+  const todayScheduled = frequency.includes(todayWeekday)
+
+  if (logSet.has(today)) {
+    currentStreak++
+    checkDate = addDaysToDateString(today, -1)
+  } else if (!todayScheduled) {
+    // Today is not scheduled, streak carries over from last scheduled day
+    checkDate = addDaysToDateString(today, -1)
+  } else {
+    // Today is scheduled but not checked off yet
+    // Today remains open; check contiguous streak ending on yesterday / prior scheduled days
+    checkDate = addDaysToDateString(today, -1)
+  }
+
+  while (true) {
+    if (createdOn && checkDate < createdOn) break
+    if (checkDate < earliest) break
+
+    const weekday = getLocalWeekday(parseLocalDateString(checkDate))
+    const isScheduled = frequency.includes(weekday)
+    const isCompleted = logSet.has(checkDate)
+
+    if (isScheduled) {
+      if (isCompleted) {
+        currentStreak++
+      } else {
+        // Scheduled day was missed or unchecked: contiguous streak breaks!
+        break
+      }
+    } else if (isCompleted) {
+      // Bonus completion on an unscheduled day
+      currentStreak++
+    }
+
+    checkDate = addDaysToDateString(checkDate, -1)
+  }
+
+  // 2. Calculate longest contiguous streak across history (forward pass from earliest up to today)
   let run = 0
   let historicalLongest = 0
   let currentDateStr = earliest
 
   while (currentDateStr <= today) {
     const weekday = getLocalWeekday(parseLocalDateString(currentDateStr))
-    const isRelevant = frequency.includes(weekday) || logSet.has(currentDateStr)
+    const isScheduled = frequency.includes(weekday)
+    const isCompleted = logSet.has(currentDateStr)
 
-    if (isRelevant) {
-      if (logSet.has(currentDateStr)) {
-        run++
-        if (run > historicalLongest) {
-          historicalLongest = run
-        }
-      } else {
-        if (currentDateStr !== today) {
-          run = 0
-        }
+    if (isCompleted) {
+      run++
+      if (run > historicalLongest) {
+        historicalLongest = run
+      }
+    } else if (isScheduled) {
+      if (currentDateStr !== today) {
+        run = 0
       }
     }
 
     currentDateStr = addDaysToDateString(currentDateStr, 1)
   }
 
-  // 2. Calculate raw current streak (walking backward from today)
-  let rawCurrent = 0
-  let checkDate = today
-  const todayWeekday = getLocalWeekday(parseLocalDateString(today))
-  const todayScheduled = frequency.includes(todayWeekday)
+  const longestStreak = Math.max(historicalLongest, currentStreak)
 
-  if (logSet.has(today)) {
-    rawCurrent++
-    checkDate = addDaysToDateString(today, -1)
-  } else if (!todayScheduled) {
-    checkDate = addDaysToDateString(today, -1)
-  } else {
-    // Today scheduled but not checked off yet
-    checkDate = addDaysToDateString(today, -1)
-  }
-
-  while (true) {
-    const weekday = getLocalWeekday(parseLocalDateString(checkDate))
-    if (frequency.includes(weekday)) {
-      if (logSet.has(checkDate)) {
-        rawCurrent++
-      } else {
-        break
-      }
-    }
-    checkDate = addDaysToDateString(checkDate, -1)
-    if (createdOn && checkDate < createdOn) break
-    if (checkDate < earliest) break
-  }
-
-  // 3. Smart current streak with 1 Grace Day per rolling 7 days
-  let smartCurrent = 0
-  let graceUsedThisWeek = false
-  let activeGraceDate = null
-  let pendingGraceDate = null
-  let pendingGraceCount = 0
-
-  checkDate = today
-  if (logSet.has(today)) {
-    smartCurrent++
-    checkDate = addDaysToDateString(today, -1)
-  } else {
-    checkDate = addDaysToDateString(today, -1)
-  }
-
-  const weekCutoff = addDaysToDateString(today, -6)
-
-  while (true) {
-    if (createdOn && checkDate < createdOn) break
-    if (checkDate < earliest && !pendingGraceDate) break
-
-    const weekday = getLocalWeekday(parseLocalDateString(checkDate))
-    if (frequency.includes(weekday)) {
-      if (logSet.has(checkDate)) {
-        if (pendingGraceDate) {
-          smartCurrent += pendingGraceCount + 1
-          if (!activeGraceDate) {
-            activeGraceDate = pendingGraceDate
-            if (activeGraceDate >= weekCutoff) {
-              graceUsedThisWeek = true
-            }
-          }
-          pendingGraceDate = null
-          pendingGraceCount = 0
-        } else {
-          smartCurrent++
-        }
-      } else {
-        if (!pendingGraceDate && !activeGraceDate) {
-          pendingGraceDate = checkDate
-          pendingGraceCount = 1
-        } else {
-          break
-        }
-      }
-    }
-    checkDate = addDaysToDateString(checkDate, -1)
-  }
-
-  const effectiveCurrent = Math.max(smartCurrent, rawCurrent)
-  const longest = Math.max(historicalLongest, effectiveCurrent)
-
-  // 4. 30-Day Momentum Score
+  // 3. 30-Day Momentum Score
   let recentCompleted = 0
   let recentScheduled = 0
   let priorCompleted = 0
@@ -192,11 +152,11 @@ function calculateStreaks(logDates, frequency, today, createdOn) {
   else if (momentumScore >= 50) momentumLabel = "Building"
 
   return {
-    current: effectiveCurrent,
-    longest,
-    rawCurrent,
-    graceUsedThisWeek,
-    graceDate: activeGraceDate,
+    current: currentStreak,
+    longest: longestStreak,
+    rawCurrent: currentStreak,
+    graceUsedThisWeek: false,
+    graceDate: null,
     momentumScore,
     momentumLabel,
   }
@@ -278,40 +238,81 @@ test("calculateStreaks: momentum score weights recent 7 days (60%) vs prior hist
   assert.equal(result.momentumLabel, "Building")
 })
 
-test("calculateStreaks: Smart Streak applies 1 grace day to bridge missed day", () => {
-  // Oct 20 missed, but Oct 21 is completed, and Oct 15-19 are completed
+test("calculateStreaks: unchecking past day earlier in current week recalculates and breaks current streak", () => {
+  // Before unchecking: Oct 15-20 were checked. Today is Oct 21 (open).
+  const logsBefore = [
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-17",
+    "2026-10-18",
+    "2026-10-19",
+    "2026-10-20",
+  ]
+  const beforeResult = calculateStreaks(logsBefore, EVERY_DAY, "2026-10-21", "2026-10-01")
+  assert.equal(beforeResult.current, 6)
+  assert.equal(beforeResult.longest, 6)
+
+  // Unchecking Tuesday Oct 20:
+  const logsAfter = [
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-17",
+    "2026-10-18",
+    "2026-10-19",
+    // 2026-10-20 unchecked!
+  ]
+  const afterResult = calculateStreaks(logsAfter, EVERY_DAY, "2026-10-21", "2026-10-01")
+  // Since yesterday Oct 20 was unchecked/missed, current streak is 0 (NOT stuck at 6)
+  assert.equal(afterResult.current, 0)
+  assert.equal(afterResult.rawCurrent, 0)
+  // Longest contiguous chain in history was Oct 15-19 (5 days)
+  assert.equal(afterResult.longest, 5)
+})
+
+test("calculateStreaks: unchecking past day when today is completed decrements streak to today's contiguous run", () => {
+  // Oct 15-21 checked (7 days). Uncheck Oct 20 (yesterday).
   const logs = [
     "2026-10-15",
     "2026-10-16",
     "2026-10-17",
     "2026-10-18",
     "2026-10-19",
-    // 2026-10-20 missed!
-    "2026-10-21",
+    // 2026-10-20 unchecked
+    "2026-10-21", // today
   ]
   const result = calculateStreaks(logs, EVERY_DAY, "2026-10-21", "2026-10-01")
-  // Raw current should be 1 (only today)
+  assert.equal(result.current, 1)
   assert.equal(result.rawCurrent, 1)
-  // Smart current bridges the gap to Oct 19: 1 (today) + 1 (grace) + 5 (prior) = 7
-  assert.equal(result.current, 7)
-  assert.equal(result.graceUsedThisWeek, true)
-  assert.equal(result.graceDate, "2026-10-20")
+  assert.equal(result.longest, 5) // Oct 15-19
 })
 
-test("calculateStreaks: Streak breaks when two consecutive scheduled days are missed", () => {
+test("calculateStreaks: unchecking today decrements current streak to unbroken run ending yesterday", () => {
+  // Oct 15-20 were checked. Today is Oct 20.
+  // Unchecking today Oct 20:
   const logs = [
     "2026-10-15",
     "2026-10-16",
     "2026-10-17",
     "2026-10-18",
-    // 2026-10-19 missed
-    // 2026-10-20 missed
-    "2026-10-21", // only today completed
+    "2026-10-19",
   ]
-  const result = calculateStreaks(logs, EVERY_DAY, "2026-10-21", "2026-10-01")
-  assert.equal(result.rawCurrent, 1)
-  assert.equal(result.current, 1) // Streak did not bridge 2 consecutive missed days
-  assert.equal(result.longest, 4) // Historical longest was Oct 15-18 (4 days)
+  const result = calculateStreaks(logs, EVERY_DAY, "2026-10-20", "2026-10-01")
+  assert.equal(result.current, 5)
+  assert.equal(result.longest, 5)
+})
+
+test("calculateStreaks: re-checking previously unchecked day restores contiguous streak", () => {
+  const logsRestored = [
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-17",
+    "2026-10-18",
+    "2026-10-19",
+    "2026-10-20",
+  ]
+  const result = calculateStreaks(logsRestored, EVERY_DAY, "2026-10-21", "2026-10-01")
+  assert.equal(result.current, 6)
+  assert.equal(result.longest, 6)
 })
 
 test("calculateStreaks: Weekdays habit ignores unscheduled weekend days", () => {

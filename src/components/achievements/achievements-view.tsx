@@ -25,6 +25,10 @@ interface AchievementsViewProps {
     key: string
     unlocked_at: string
   }[]
+  initialStats?: {
+    totalCheckIns: number
+    longestStreak: number
+  } | null
 }
 
 const ICONS: Record<string, LucideIcon> = {
@@ -88,6 +92,7 @@ function getProgress(
 
 export function AchievementsView({
   initialAchievements,
+  initialStats = null,
 }: AchievementsViewProps) {
   const router = useRouter()
   const hasSyncedRef = useRef(false)
@@ -95,7 +100,7 @@ export function AchievementsView({
   const [stats, setStats] = useState<{
     totalCheckIns: number
     longestStreak: number
-  } | null>(null)
+  } | null>(initialStats)
 
   useEffect(() => {
     if (hasSyncedRef.current) return
@@ -127,6 +132,19 @@ export function AchievementsView({
   }, [unlockedRows])
 
   const { list, unlockedCount, totalCount } = useMemo(() => {
+    const isBadgeEligible = (key: string): boolean => {
+      if (!stats) return true
+      if (stats.totalCheckIns === 0) return false
+      if (key === "first_checkin") return stats.totalCheckIns >= 1
+      if (key === "checkins_25") return stats.totalCheckIns >= 25
+      if (key === "checkins_100") return stats.totalCheckIns >= 100
+      if (key === "checkins_500") return stats.totalCheckIns >= 500
+      if (key === "streak_7") return stats.longestStreak >= 7
+      if (key === "streak_30") return stats.longestStreak >= 30
+      if (key === "streak_100") return stats.longestStreak >= 100
+      return true
+    }
+
     const unlockedList: {
       key: string
       title: string
@@ -143,7 +161,7 @@ export function AchievementsView({
 
     for (const def of ACHIEVEMENTS) {
       const unlockedAt = unlockedMap.get(def.key)
-      if (unlockedAt) {
+      if (unlockedAt && isBadgeEligible(def.key)) {
         unlockedList.push({
           ...def,
           unlocked_at: unlockedAt,
@@ -167,7 +185,7 @@ export function AchievementsView({
         })),
       ],
     }
-  }, [unlockedMap])
+  }, [unlockedMap, stats])
 
   return (
     <div className="pt-7 md:pt-14 pb-14 md:pb-[72px]">

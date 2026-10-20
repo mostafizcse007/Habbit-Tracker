@@ -114,7 +114,7 @@ export function evaluateAchievements(
   let longestStreak = 0
   for (const habit of habits) {
     const logs = logsByHabit[habit.id] ?? []
-    const s = calculateStreaks(logs, habit.frequency, today)
+    const s = calculateStreaks(logs, habit.frequency, today, habit.createdOn)
     if (s.longest > longestStreak) {
       longestStreak = s.longest
     }

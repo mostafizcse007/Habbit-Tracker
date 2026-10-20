@@ -174,8 +174,16 @@ export function DashboardContent({ habits }: DashboardContentProps) {
           [habit.id]: currentLogs,
         }))
         toast.error("Could not update that day. Try again.")
-      } else if (nextCompleted) {
-        scheduleCheck()
+      } else {
+        if (result && "success" in result && "logs" in result && result.logs) {
+          setLogsByHabit((prev) => ({
+            ...prev,
+            [habit.id]: result.logs,
+          }))
+        }
+        if (nextCompleted) {
+          scheduleCheck()
+        }
       }
     } catch {
       setLogsByHabit((prev) => ({
@@ -305,7 +313,8 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     const graceMap: Record<string, boolean> = {}
     for (const habit of habits) {
       const logs = logsByHabit[habit.id] ?? []
-      const streaks = calculateStreaks(logs, habit.frequency, today)
+      const createdOn = getLocalDateString(new Date(habit.created_at))
+      const streaks = calculateStreaks(logs, habit.frequency, today, createdOn)
       streakMap[habit.id] = streaks.current
       if (streaks.graceUsedThisWeek) {
         graceMap[habit.id] = true
@@ -318,10 +327,18 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     return Array.from(new Set(habits.flatMap((h) => h.tags ?? [])))
   }, [habits])
 
+  const sortedHabits = useMemo(() => {
+    return [...habits].sort(
+      (a, b) =>
+        (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+        a.created_at.localeCompare(b.created_at)
+    )
+  }, [habits])
+
   const habitsToRender = useMemo(() => {
-    if (!selectedTag) return habits
-    return habits.filter((h) => h.tags?.includes(selectedTag))
-  }, [habits, selectedTag])
+    if (!selectedTag) return sortedHabits
+    return sortedHabits.filter((h) => h.tags?.includes(selectedTag))
+  }, [sortedHabits, selectedTag])
 
   const topNudge = useMemo(() => {
     if (!today || habits.length === 0) return null

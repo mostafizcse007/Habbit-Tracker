@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { HABIT_TEMPLATES } from "@/lib/habit-templates"
+import { reconcileUserAchievements } from "@/lib/achievements-sync"
 
 const habitSchema = z.object({
   name: z
@@ -184,6 +185,7 @@ export async function archiveHabit(id: string): Promise<HabitActionState> {
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/achievements")
   revalidatePath("/profile")
   return { success: true }
 }
@@ -202,6 +204,14 @@ export async function deleteHabit(id: string): Promise<HabitActionState> {
     return { error: "Not signed in" }
   }
 
+  // 1. Explicitly cascade deletion of associated check-ins so no orphaned logs remain
+  await supabase
+    .from("habit_logs")
+    .delete()
+    .eq("habit_id", id)
+    .eq("user_id", user.id)
+
+  // 2. Delete the habit
   const { error } = await supabase
     .from("habits")
     .delete()
@@ -212,9 +222,13 @@ export async function deleteHabit(id: string): Promise<HabitActionState> {
     return { error: error.message }
   }
 
+  // 3. Reconcile achievements immediately so deleting habit revokes invalid badges
+  await reconcileUserAchievements(supabase, user.id)
+
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/achievements")
   revalidatePath("/profile")
   return { success: true }
 }
@@ -246,6 +260,7 @@ export async function unarchiveHabit(id: string): Promise<HabitActionState> {
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
+  revalidatePath("/achievements")
   revalidatePath("/profile")
   return { success: true }
 }
@@ -272,11 +287,24 @@ export async function reorderHabits(
   })
 
   if (error) {
-    return { error: error.message }
+    const updates = parsed.data.map((id, index) =>
+      supabase
+        .from("habits")
+        .update({ sort_order: index + 1 })
+        .eq("id", id)
+        .eq("user_id", user.id)
+    )
+    const results = await Promise.all(updates)
+    const failed = results.find((r) => r.error)
+    if (failed?.error) {
+      return { error: failed.error.message }
+    }
   }
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
+  revalidatePath("/profile")
   return { success: true }
 }
 

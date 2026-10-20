@@ -7,12 +7,14 @@ import { GripVertical, Archive, RotateCcw, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type Announcements,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core"
 import {
   arrayMove,
@@ -21,6 +23,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import type { Habit } from "@/types"
 import { cn } from "@/lib/utils"
 import { formatSchedule } from "@/lib/habit-schedule"
@@ -66,9 +69,7 @@ function SortableHabitRow({
   } = useSortable({ id: habit.id })
 
   const style: React.CSSProperties = {
-    transform: transform
-      ? `translate3d(0px, ${Math.round(transform.y)}px, 0px)`
-      : undefined,
+    transform: CSS.Translate.toString(transform),
     transition,
     "--i": Math.min(index, 8),
   } as React.CSSProperties
@@ -82,7 +83,7 @@ function SortableHabitRow({
       className={cn(
         "anim-reveal min-h-[72px] px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-[14px]",
         isFirst ? "" : "border-t border-border",
-        isDragging && "relative z-10 bg-card border-y border-foreground shadow-none"
+        isDragging && "opacity-30 bg-muted/40 border-dashed relative z-10"
       )}
     >
       <div className="flex items-center gap-2.5 sm:gap-[14px] min-w-0">
@@ -90,8 +91,8 @@ function SortableHabitRow({
           type="button"
           aria-label={`Reorder ${habit.name}`}
           className={cn(
-            "size-[44px] md:size-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0 rounded-lg select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-            isDragging ? "cursor-grabbing" : "cursor-grab"
+            "size-[44px] md:size-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0 rounded-lg select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-grab active:cursor-grabbing",
+            isDragging && "cursor-grabbing"
           )}
           style={{ touchAction: "none" }}
           {...attributes}
@@ -218,6 +219,7 @@ export function HabitList({ habits }: HabitListProps) {
   const [items, setItems] = useState<Habit[]>(habits)
   const [prevHabits, setPrevHabits] = useState<Habit[]>(habits)
   const [activeTab, setActiveTab] = useState<"active" | "archived">("active")
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   if (prevHabits !== habits) {
@@ -231,7 +233,7 @@ export function HabitList({ habits }: HabitListProps) {
         .filter((h) => !h.archived)
         .sort(
           (a, b) =>
-            a.sort_order - b.sort_order ||
+            (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
             a.created_at.localeCompare(b.created_at)
         ),
     [items]
@@ -243,10 +245,15 @@ export function HabitList({ habits }: HabitListProps) {
         .filter((h) => h.archived)
         .sort(
           (a, b) =>
-            a.sort_order - b.sort_order ||
+            (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
             a.created_at.localeCompare(b.created_at)
         ),
     [items]
+  )
+
+  const activeDragHabit = useMemo(
+    () => (activeDragId ? activeHabits.find((h) => h.id === activeDragId) : null),
+    [activeHabits, activeDragId]
   )
 
   const handleHabitUpdated = (
@@ -338,7 +345,7 @@ export function HabitList({ habits }: HabitListProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 6,
+        distance: 4,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -375,8 +382,14 @@ export function HabitList({ habits }: HabitListProps) {
     },
   }
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string)
+  }
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
+    setActiveDragId(null)
+
     if (!over || active.id === over.id) {
       return
     }
@@ -389,23 +402,57 @@ export function HabitList({ habits }: HabitListProps) {
     }
 
     const previousItems = items
-    const newActive = arrayMove(activeHabits, oldIndex, newIndex)
-    // Update local state preserving new active ordering and keeping archived items
-    setItems([...newActive, ...archivedHabits])
+    const movedActive = arrayMove(activeHabits, oldIndex, newIndex)
+
+    // Assign continuous sort_order (1-indexed) based on the new array order
+    const reorderedActive = movedActive.map((habit, index) => ({
+      ...habit,
+      sort_order: index + 1,
+    }))
+
+    // Optimistically update local state immediately so there is no snap-back or flicker
+    setItems([...reorderedActive, ...archivedHabits])
 
     startTransition(async () => {
+      const newIds = reorderedActive.map((h) => h.id)
       try {
-        const newIds = newActive.map((h) => h.id)
-        const res = await reorderHabits(newIds)
-        if (res && "error" in res) {
+        const response = await fetch("/api/habits/reorder", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ habitIds: newIds }),
+        })
+
+        if (!response.ok) {
+          // Fall back to server action
+          const actionResult = await reorderHabits(newIds)
+          if (actionResult && "error" in actionResult) {
+            setItems(previousItems)
+            toast.error("Could not save the new order. Try again.")
+            return
+          }
+        }
+
+        router.refresh()
+      } catch {
+        // Fall back to direct server action
+        try {
+          const actionResult = await reorderHabits(newIds)
+          if (actionResult && "error" in actionResult) {
+            setItems(previousItems)
+            toast.error("Could not save the new order. Try again.")
+          } else {
+            router.refresh()
+          }
+        } catch {
           setItems(previousItems)
           toast.error("Could not save the new order. Try again.")
         }
-      } catch {
-        setItems(previousItems)
-        toast.error("Could not save the new order. Try again.")
       }
     })
+  }
+
+  const handleDragCancel = () => {
+    setActiveDragId(null)
   }
 
   // If user has zero habits at all (neither active nor archived), show starter habits onboarding
@@ -524,7 +571,9 @@ export function HabitList({ habits }: HabitListProps) {
                   id="habit-order"
                   sensors={sensors}
                   accessibility={{ announcements }}
+                  onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
+                  onDragCancel={handleDragCancel}
                 >
                   <SortableContext
                     items={activeHabits.map((h) => h.id)}
@@ -542,6 +591,45 @@ export function HabitList({ habits }: HabitListProps) {
                       />
                     ))}
                   </SortableContext>
+
+                  <DragOverlay
+                    dropAnimation={{
+                      duration: 150,
+                      easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+                    }}
+                  >
+                    {activeDragHabit ? (
+                      <div className="min-h-[72px] px-3.5 sm:px-6 flex items-center justify-between gap-2.5 sm:gap-[14px] bg-card border border-primary/30 rounded-[14px] shadow-lg cursor-grabbing select-none pointer-events-none">
+                        <div className="flex items-center gap-2.5 sm:gap-[14px] min-w-0">
+                          <div className="size-[44px] md:size-[36px] flex items-center justify-center text-foreground shrink-0 rounded-lg">
+                            <GripVertical className="size-4" />
+                          </div>
+                          <span
+                            className="size-[10px] rounded-[3px] shrink-0"
+                            style={{ backgroundColor: activeDragHabit.color }}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[17px] font-semibold text-foreground truncate">
+                                {activeDragHabit.name}
+                              </span>
+                              {activeDragHabit.tags &&
+                                activeDragHabit.tags.length > 0 && (
+                                  <span className="shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
+                                    {activeDragHabit.tags[0]}
+                                    {activeDragHabit.tags.length > 1 &&
+                                      ` +${activeDragHabit.tags.length - 1}`}
+                                  </span>
+                                )}
+                            </div>
+                            <div className="text-[13px] text-muted-foreground mt-0.5 truncate">
+                              {formatSchedule(activeDragHabit.frequency)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
                 </DndContext>
               </div>
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { connection } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { isDemoUser } from "@/lib/demo"
+import { getUserTotalCheckIns } from "@/lib/logs"
 import { ProfileView } from "@/components/profile/profile-view"
 import type { CoverConfig } from "@/app/(app)/profile/actions"
 
@@ -32,7 +33,7 @@ export default async function ProfilePage() {
   const [
     { data: profile },
     { count: habitsCount },
-    { count: totalLogsCount },
+    { total: totalLogsCount },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -44,10 +45,7 @@ export default async function ProfilePage() {
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("archived", false),
-    supabase
-      .from("habit_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id),
+    getUserTotalCheckIns(supabase, user.id),
   ])
 
   const isDemo = isDemoUser(user)

@@ -73,3 +73,47 @@ export async function fetchAllLogs(
 
   return { data: allRows, error: null }
 }
+
+/**
+ * Single source of truth for total check-ins count across /profile, /achievements, and /analytics.
+ * Consistently counts valid check-ins belonging to the user's active habits,
+ * strictly excluding any orphaned logs from deleted habits.
+ */
+export async function getUserTotalCheckIns(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  options?: { includeArchived?: boolean }
+): Promise<{ total: number; error: string | null }> {
+  let habitsQuery = supabase
+    .from("habits")
+    .select("id")
+    .eq("user_id", userId)
+
+  if (!options?.includeArchived) {
+    habitsQuery = habitsQuery.eq("archived", false)
+  }
+
+  const { data: habits, error: habitsError } = await habitsQuery
+
+  if (habitsError) {
+    return { total: 0, error: habitsError.message }
+  }
+
+  if (!habits || habits.length === 0) {
+    return { total: 0, error: null }
+  }
+
+  const habitIds = habits.map((h) => h.id)
+
+  const { count, error: countError } = await supabase
+    .from("habit_logs")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .in("habit_id", habitIds)
+
+  if (countError) {
+    return { total: 0, error: countError.message }
+  }
+
+  return { total: count ?? 0, error: null }
+}
