@@ -27,12 +27,14 @@ interface HabitActionsProps {
   habit: Habit
   onArchived?: () => void
   onDeleted?: () => void
+  onUpdated?: (updatedData?: Partial<Habit> & { id?: string }) => void
 }
 
 export function HabitActions({
   habit,
   onArchived,
   onDeleted,
+  onUpdated,
 }: HabitActionsProps) {
   const [isPending, startTransition] = useTransition()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -101,6 +103,7 @@ export function HabitActions({
         habit={habit}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        onSuccess={onUpdated}
       />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

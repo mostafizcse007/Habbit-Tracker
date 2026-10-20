@@ -6,6 +6,9 @@ import { HabitDialog } from "@/components/habits/habit-dialog"
 import { HabitList } from "@/components/habits/habit-list"
 import { StarterHabits } from "@/components/habits/starter-habits"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export const metadata: Metadata = {
   title: "Habits",
   robots: {
@@ -58,10 +61,7 @@ export default async function HabitsPage() {
           <StarterHabits />
         </div>
       ) : (
-        <HabitList
-          key={habits.map((h) => h.id).join(",")}
-          habits={habits}
-        />
+        <HabitList habits={habits} />
       )}
     </div>
   )

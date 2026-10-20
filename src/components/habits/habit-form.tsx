@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect, useState } from "react"
+import { useActionState, useEffect, useRef, useState } from "react"
 import type { Habit } from "@/types"
 import { createHabit, updateHabit } from "@/app/(app)/habits/actions"
 import { HABIT_TEMPLATES } from "@/lib/habit-templates"
@@ -48,7 +48,7 @@ const PRESET_TAGS = [
 
 interface HabitFormProps {
   habit?: Habit
-  onSuccess?: () => void
+  onSuccess?: (updatedData?: Partial<Habit> & { id?: string }) => void
 }
 
 export function HabitForm({ habit, onSuccess }: HabitFormProps) {
@@ -65,11 +65,24 @@ export function HabitForm({ habit, onSuccess }: HabitFormProps) {
   const [tags, setTags] = useState<string[]>(habit?.tags ?? [])
   const [customTag, setCustomTag] = useState("")
 
+  const valuesRef = useRef({ name, selectedColor, selectedDays, tags })
+  valuesRef.current = { name, selectedColor, selectedDays, tags }
+
   useEffect(() => {
     if (state?.success && onSuccess) {
-      onSuccess()
+      if (habit) {
+        onSuccess({
+          id: habit.id,
+          name: valuesRef.current.name.trim(),
+          color: valuesRef.current.selectedColor,
+          frequency: valuesRef.current.selectedDays,
+          tags: valuesRef.current.tags,
+        })
+      } else {
+        onSuccess()
+      }
     }
-  }, [state?.success, onSuccess])
+  }, [state?.success, habit, onSuccess])
 
   const toggleDay = (day: number) => {
     setSelectedDays((prev) =>

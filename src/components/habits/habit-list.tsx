@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import { GripVertical } from "lucide-react"
 import { toast } from "sonner"
@@ -35,9 +35,17 @@ interface SortableHabitRowProps {
   habit: Habit
   index: number
   isFirst: boolean
+  onUpdated: (updatedData?: Partial<Habit> & { id?: string }) => void
+  onRemoved: (habitId: string) => void
 }
 
-function SortableHabitRow({ habit, index, isFirst }: SortableHabitRowProps) {
+function SortableHabitRow({
+  habit,
+  index,
+  isFirst,
+  onUpdated,
+  onRemoved,
+}: SortableHabitRowProps) {
   const {
     attributes,
     listeners,
@@ -104,7 +112,12 @@ function SortableHabitRow({ habit, index, isFirst }: SortableHabitRowProps) {
         </div>
       </div>
 
-      <HabitActions habit={habit} />
+      <HabitActions
+        habit={habit}
+        onUpdated={onUpdated}
+        onArchived={() => onRemoved(habit.id)}
+        onDeleted={() => onRemoved(habit.id)}
+      />
     </div>
   )
 }
@@ -112,6 +125,23 @@ function SortableHabitRow({ habit, index, isFirst }: SortableHabitRowProps) {
 export function HabitList({ habits }: HabitListProps) {
   const [items, setItems] = useState<Habit[]>(habits)
   const [, startTransition] = useTransition()
+
+  useEffect(() => {
+    setItems(habits)
+  }, [habits])
+
+  const handleHabitUpdated = (
+    updatedData?: Partial<Habit> & { id?: string }
+  ) => {
+    if (!updatedData?.id) return
+    setItems((prev) =>
+      prev.map((h) => (h.id === updatedData.id ? { ...h, ...updatedData } : h))
+    )
+  }
+
+  const handleHabitRemoved = (habitId: string) => {
+    setItems((prev) => prev.filter((h) => h.id !== habitId))
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -209,6 +239,8 @@ export function HabitList({ habits }: HabitListProps) {
                   habit={habit}
                   index={index}
                   isFirst={index === 0}
+                  onUpdated={handleHabitUpdated}
+                  onRemoved={handleHabitRemoved}
                 />
               ))}
             </SortableContext>

@@ -93,6 +93,7 @@ export async function createHabit(
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
   return { success: true }
 }
 
@@ -151,6 +152,7 @@ export async function updateHabit(
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
   return { success: true }
 }
 
@@ -180,6 +182,7 @@ export async function archiveHabit(id: string): Promise<HabitActionState> {
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
   return { success: true }
 }
 
@@ -209,6 +212,7 @@ export async function deleteHabit(id: string): Promise<HabitActionState> {
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
   return { success: true }
 }
 
@@ -304,6 +308,7 @@ export async function createHabitsFromTemplates(
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")
+  revalidatePath("/analytics")
   return { success: true, added: rows.length }
 }
 

@@ -51,12 +51,17 @@ export function HabitDetail({ habit }: HabitDetailProps) {
   const { scheduleCheck } = useAchievementCheck()
   const { mark, isRecent } = useJustChanged()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [currentHabit, setCurrentHabit] = useState<Habit>(habit)
   const [today, setToday] = useState<string>("")
   const [logs, setLogs] = useState<string[]>([])
   const [notesByDate, setNotesByDate] = useState<Record<string, string>>({})
   const [activeNoteDate, setActiveNoteDate] = useState<string | null>(null)
   const [pendingDates, setPendingDates] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setCurrentHabit(habit)
+  }, [habit])
 
   useEffect(() => {
     const loadLogs = async () => {
@@ -186,23 +191,23 @@ export function HabitDetail({ habit }: HabitDetailProps) {
   }
 
   const createdOn = useMemo(
-    () => getLocalDateString(new Date(habit.created_at)),
-    [habit.created_at]
+    () => getLocalDateString(new Date(currentHabit.created_at)),
+    [currentHabit.created_at]
   )
   const startedText = useMemo(() => formatLongDate(createdOn), [createdOn])
   const scheduleText = useMemo(
-    () => formatSchedule(habit.frequency),
-    [habit.frequency]
+    () => formatSchedule(currentHabit.frequency),
+    [currentHabit.frequency]
   )
 
   const streaks = useMemo(
-    () => calculateStreaks(logs, habit.frequency, today, createdOn),
-    [logs, habit.frequency, today, createdOn]
+    () => calculateStreaks(logs, currentHabit.frequency, today, createdOn),
+    [logs, currentHabit.frequency, today, createdOn]
   )
 
   const rateStats = useMemo(
-    () => calculateCompletionRate(logs, habit.frequency, createdOn, today, 30),
-    [logs, habit.frequency, createdOn, today]
+    () => calculateCompletionRate(logs, currentHabit.frequency, createdOn, today, 30),
+    [logs, currentHabit.frequency, createdOn, today]
   )
 
   const logSet = useMemo(() => new Set(logs), [logs])
@@ -318,17 +323,20 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           <div className="flex items-center gap-3.5 min-w-0">
             <span
               className="size-[14px] rounded-[4px] shrink-0"
-              style={{ backgroundColor: habit.color }}
+              style={{ backgroundColor: currentHabit.color }}
             />
             <h1 className="text-[40px] md:text-[56px] font-bold leading-none tracking-[-0.045em] text-foreground truncate">
-              {habit.name}
+              {currentHabit.name}
             </h1>
           </div>
 
           <HabitActions
-            habit={habit}
+            habit={currentHabit}
             onArchived={handleAfterAction}
             onDeleted={handleAfterAction}
+            onUpdated={(updated) =>
+              setCurrentHabit((prev) => ({ ...prev, ...updated }))
+            }
           />
         </div>
 
@@ -336,9 +344,9 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           {scheduleText}. Started {startedText}.
         </p>
 
-        {habit.tags && habit.tags.length > 0 && (
+        {currentHabit.tags && currentHabit.tags.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 mt-3">
-            {habit.tags.map((tag) => (
+            {currentHabit.tags.map((tag) => (
               <span
                 key={tag}
                 className="px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-secondary text-secondary-foreground border border-border"
@@ -485,7 +493,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
             <div className="flex items-center gap-1.5">
               <span
                 className="size-[12px] rounded-[3px] shrink-0"
-                style={{ backgroundColor: habit.color }}
+                style={{ backgroundColor: currentHabit.color }}
               />
               <span>Done</span>
             </div>
@@ -564,7 +572,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
                     const isLogged = logSet.has(date)
                     const d = parseLocalDateString(date)
                     const weekday = getLocalWeekday(d)
-                    const isScheduled = habit.frequency.includes(weekday)
+                    const isScheduled = currentHabit.frequency.includes(weekday)
                     const isOnOrAfterCreation = date >= createdOn
                     const isToday = date === today
 
@@ -574,7 +582,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
 
                     if (isLogged) {
                       status = "done"
-                      bgStyle = { backgroundColor: habit.color }
+                      bgStyle = { backgroundColor: currentHabit.color }
                     } else if (isScheduled && isOnOrAfterCreation) {
                       status = "missed"
                       bgClass = "bg-muted"
@@ -604,7 +612,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
       </div>
 
       <HabitHistoryEditor
-        habit={habit}
+        habit={currentHabit}
         logs={logs}
         today={today}
         pending={pendingDates}
@@ -613,7 +621,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
       />
 
       <WeekdayBars
-        habit={habit}
+        habit={currentHabit}
         logs={logs}
         today={today}
       />
@@ -692,7 +700,7 @@ export function HabitDetail({ habit }: HabitDetailProps) {
           onOpenChange={(open) => {
             if (!open) setActiveNoteDate(null)
           }}
-          habit={habit}
+          habit={currentHabit}
           date={activeNoteDate}
           initialNote={notesByDate[activeNoteDate]}
           onSave={handleSaveNote}

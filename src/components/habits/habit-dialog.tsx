@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
@@ -18,6 +19,7 @@ interface HabitDialogProps {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   trigger?: React.ReactElement
+  onSuccess?: (updatedData?: Partial<Habit> & { id?: string }) => void
 }
 
 export function HabitDialog({
@@ -25,7 +27,9 @@ export function HabitDialog({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   trigger,
+  onSuccess,
 }: HabitDialogProps) {
+  const router = useRouter()
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : internalOpen
@@ -40,9 +44,13 @@ export function HabitDialog({
     setOpen(nextOpen)
   }
 
-  const handleSuccess = () => {
+  const handleSuccess = (updatedData?: Partial<Habit> & { id?: string }) => {
     toast.success(habit ? "Habit updated" : "Habit created")
     handleOpenChange(false)
+    router.refresh()
+    if (onSuccess) {
+      onSuccess(updatedData)
+    }
   }
 
   return (
