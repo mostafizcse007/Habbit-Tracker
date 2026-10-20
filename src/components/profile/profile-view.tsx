@@ -369,6 +369,7 @@ export function ProfileView({
     } catch {}
     const found = COVER_PRESETS.find((p) => p.id === presetId)
     toast.success(`Cover theme set to ${found?.name ?? "preset"}.`)
+    setCoverModalOpen(false)
   }
 
   const handleCustomCoverUpload = async (
@@ -388,6 +389,27 @@ export function ProfileView({
     }
 
     setIsUploadingCover(true)
+
+    // 1. Immediately read and apply locally, then auto-close modal without waiting for Done button
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string
+      if (dataUrl) {
+        const newConfig = { type: "custom" as const, customUrl: dataUrl }
+        try {
+          localStorage.setItem(
+            `habit_cover_${user.id}`,
+            JSON.stringify(newConfig)
+          )
+          window.dispatchEvent(new Event("habit_cover_updated"))
+        } catch {}
+        toast.success("Cover image updated.")
+        setCoverModalOpen(false)
+      }
+    }
+    reader.readAsDataURL(file)
+
+    // 2. Concurrently persist to Supabase storage in background
     try {
       let extension = "png"
       if (file.type === "image/jpeg") extension = "jpg"
@@ -400,46 +422,24 @@ export function ProfileView({
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, file, { upsert: false })
 
-      if (uploadError) {
-        // Fallback to FileReader base64 URL so custom covers always succeed
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          const dataUrl = event.target?.result as string
-          if (dataUrl) {
-            const newConfig = { type: "custom" as const, customUrl: dataUrl }
-            try {
-              localStorage.setItem(
-                `habit_cover_${user.id}`,
-                JSON.stringify(newConfig)
-              )
-              window.dispatchEvent(new Event("habit_cover_updated"))
-            } catch {}
-            toast.success("Cover image updated.")
-            setCoverModalOpen(false)
-          }
-        }
-        reader.readAsDataURL(file)
-        return
+      if (!uploadError) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("avatars").getPublicUrl(filePath)
+
+        const newConfig = { type: "custom" as const, customUrl: publicUrl }
+        try {
+          localStorage.setItem(
+            `habit_cover_${user.id}`,
+            JSON.stringify(newConfig)
+          )
+          window.dispatchEvent(new Event("habit_cover_updated"))
+        } catch {}
       }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(filePath)
-
-      const newConfig = { type: "custom" as const, customUrl: publicUrl }
-      try {
-        localStorage.setItem(
-          `habit_cover_${user.id}`,
-          JSON.stringify(newConfig)
-        )
-        window.dispatchEvent(new Event("habit_cover_updated"))
-      } catch {}
-      toast.success("Custom cover image uploaded.")
-      setCoverModalOpen(false)
     } catch {
-      toast.error("Failed to upload cover image.")
+      // Local preview already applied seamlessly
     } finally {
       if (coverInputRef.current) coverInputRef.current.value = ""
       setIsUploadingCover(false)
@@ -453,6 +453,7 @@ export function ProfileView({
       window.dispatchEvent(new Event("habit_cover_updated"))
     } catch {}
     toast.success("Cover reset to Aurora Bloom.")
+    setCoverModalOpen(false)
   }
 
   const handleCopyHandle = () => {
