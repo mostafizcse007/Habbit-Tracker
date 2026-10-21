@@ -3,7 +3,11 @@
 import Link from "next/link"
 import { Flame, FileText, Shield } from "lucide-react"
 import type { Habit } from "@/types"
-import { parseLocalDateString } from "@/lib/dates"
+import {
+  getLocalDateString,
+  formatShortDate,
+  parseLocalDateString,
+} from "@/lib/dates"
 import { formatSchedule } from "@/lib/habit-schedule"
 import { WeekCell, type CellState } from "./week-cell"
 import { StreakNumber } from "./streak-number"
@@ -158,13 +162,29 @@ export function WeekSheet({
                 const state = getCellState(habit, date)
                 const isPending = pendingKeys.has(`${habit.id}:${date}`)
                 const hasNote = Boolean(notesByHabitDate?.[`${habit.id}:${date}`])
+                const createdOn = getLocalDateString(new Date(habit.created_at))
+                const isBeforeCreation = date < createdOn
+                const createdFormatted = formatShortDate(createdOn)
+
                 let label = `${habit.name}, ${weekdayLong} ${dayNum}, not scheduled`
+                let title = "Not scheduled"
+
                 if (state === "done") {
                   label = `${habit.name}, ${weekdayLong} ${dayNum}, done`
+                  title = isBeforeCreation
+                    ? `Done (backfilled) · Habit created on ${createdFormatted}`
+                    : `Completed · Click to uncheck`
                 } else if (state === "missed") {
-                  label = `${habit.name}, ${weekdayLong} ${dayNum}, missed`
+                  if (isBeforeCreation) {
+                    label = `${habit.name}, ${weekdayLong} ${dayNum}, missed (habit created on ${createdFormatted}, tap to backfill)`
+                    title = `Habit created on ${createdFormatted} · Tap to backfill`
+                  } else {
+                    label = `${habit.name}, ${weekdayLong} ${dayNum}, missed`
+                    title = `Missed · Click to check off`
+                  }
                 } else if (state === "open") {
                   label = `${habit.name}, ${weekdayLong} ${dayNum}, not done yet`
+                  title = `Today · Click to check off`
                 }
 
                 return (
@@ -179,6 +199,7 @@ export function WeekSheet({
                       color={habit.color}
                       size="desktop"
                       label={label}
+                      title={title}
                       pending={isPending}
                       hasNote={hasNote}
                       justChecked={
@@ -350,13 +371,29 @@ export function WeekSheet({
                   const state = getCellState(habit, date)
                   const isPending = pendingKeys.has(`${habit.id}:${date}`)
                   const hasNote = Boolean(notesByHabitDate?.[`${habit.id}:${date}`])
+                  const createdOn = getLocalDateString(new Date(habit.created_at))
+                  const isBeforeCreation = date < createdOn
+                  const createdFormatted = formatShortDate(createdOn)
+
                   let label = `${habit.name}, ${weekdayLong} ${dayNum}, not scheduled`
+                  let title = "Not scheduled"
+
                   if (state === "done") {
                     label = `${habit.name}, ${weekdayLong} ${dayNum}, done`
+                    title = isBeforeCreation
+                      ? `Done (backfilled) · Habit created on ${createdFormatted}`
+                      : `Completed · Click to uncheck`
                   } else if (state === "missed") {
-                    label = `${habit.name}, ${weekdayLong} ${dayNum}, missed`
+                    if (isBeforeCreation) {
+                      label = `${habit.name}, ${weekdayLong} ${dayNum}, missed (habit created on ${createdFormatted}, tap to backfill)`
+                      title = `Habit created on ${createdFormatted} · Tap to backfill`
+                    } else {
+                      label = `${habit.name}, ${weekdayLong} ${dayNum}, missed`
+                      title = `Missed · Click to check off`
+                    }
                   } else if (state === "open") {
                     label = `${habit.name}, ${weekdayLong} ${dayNum}, not done yet`
+                    title = `Today · Click to check off`
                   }
 
                   return (
@@ -369,6 +406,7 @@ export function WeekSheet({
                         color={habit.color}
                         size="mobile"
                         label={label}
+                        title={title}
                         pending={isPending}
                         hasNote={hasNote}
                         justChecked={

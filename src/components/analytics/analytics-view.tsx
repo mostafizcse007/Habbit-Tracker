@@ -19,7 +19,6 @@ import {
   getLocalWeekday,
   parseLocalDateString,
 } from "@/lib/dates"
-import { calculateStreaks } from "@/lib/streaks"
 import {
   buildHeatmapWeeks,
   getMonthLabel,
@@ -28,6 +27,7 @@ import {
   buildDailyCompletion,
   buildHighlights,
   calculateHabitBreakdown,
+  calculatePeriodLongestStreak,
   getWeekdayTotals,
   groupWeekly,
   summarizeRange,
@@ -324,19 +324,26 @@ export function AnalyticsView({
   }, [habitInputs, logsByHabit, effectiveDays, today, habitBreakdown, weekdayTotals, summary])
 
   const longestStreakData = useMemo(() => {
-    if (!today) return { max: 0, habitName: "" }
+    if (!today || !startDate) return { max: 0, habitName: "" }
     let max = 0
     let habitName = ""
     for (const h of habits) {
       const logs = logsByHabit[h.id] ?? []
-      const s = calculateStreaks(logs, h.frequency, today)
-      if (s.current > max) {
-        max = s.current
+      const habitCreatedOn = getLocalDateString(new Date(h.created_at))
+      const periodStreak = calculatePeriodLongestStreak(
+        logs,
+        h.frequency,
+        startDate,
+        today,
+        habitCreatedOn
+      )
+      if (periodStreak > max) {
+        max = periodStreak
         habitName = h.name
       }
     }
     return { max, habitName }
-  }, [habits, logsByHabit, today])
+  }, [habits, logsByHabit, startDate, today])
 
   const checkInsCount = useMemo(() => {
     if (range === "all") {
@@ -621,10 +628,17 @@ export function AnalyticsView({
                 {longestStreakData.max === 1 ? "day" : "days"}
               </span>
             </div>
-            <div className="text-[13px] text-muted-foreground mt-2 truncate">
-              {longestStreakData.max > 0
-                ? longestStreakData.habitName
-                : "Longest chain now"}
+            <div
+              className="text-[13px] text-muted-foreground mt-2 truncate"
+              title={
+                longestStreakData.max > 0 && longestStreakData.habitName
+                  ? `Longest chain · ${longestStreakData.habitName}`
+                  : "Longest chain"
+              }
+            >
+              {longestStreakData.max > 0 && longestStreakData.habitName
+                ? `Longest chain · ${longestStreakData.habitName}`
+                : "Longest chain"}
             </div>
           </div>
         </div>

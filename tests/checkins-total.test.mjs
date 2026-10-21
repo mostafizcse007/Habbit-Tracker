@@ -367,3 +367,194 @@ test("getUserTotalCheckIns: returns 0 when user has no active habits or no check
   assert.equal(error, null)
   assert.equal(total, 0)
 })
+
+function parseLocalDateString(dateStr) {
+  const [yearStr, monthStr, dayStr] = dateStr.split("-")
+  return new Date(Number(yearStr), Number(monthStr) - 1, Number(dayStr))
+}
+
+function getLocalWeekday(date = new Date()) {
+  return date.getDay()
+}
+
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function addDaysToDateString(dateStr, days) {
+  const date = parseLocalDateString(dateStr)
+  date.setDate(date.getDate() + days)
+  return getLocalDateString(date)
+}
+
+function calculatePeriodLongestStreak(
+  logDates,
+  frequency,
+  startDate,
+  today,
+  createdOn
+) {
+  if (!logDates || logDates.length === 0 || !startDate || !today) return 0
+  const logSet = new Set(logDates)
+
+  let run = 0
+  let maxRun = 0
+  let currentDateStr = startDate
+
+  while (currentDateStr <= today) {
+    if (createdOn && currentDateStr < createdOn) {
+      currentDateStr = addDaysToDateString(currentDateStr, 1)
+      continue
+    }
+
+    const weekday = getLocalWeekday(parseLocalDateString(currentDateStr))
+    const isScheduled = frequency.includes(weekday)
+    const isCompleted = logSet.has(currentDateStr)
+
+    if (isCompleted) {
+      run++
+      if (run > maxRun) {
+        maxRun = run
+      }
+    } else if (isScheduled) {
+      if (currentDateStr !== today) {
+        run = 0
+      }
+    }
+
+    currentDateStr = addDaysToDateString(currentDateStr, 1)
+  }
+
+  return maxRun
+}
+
+function formatStreakCardLabel(max, habitName) {
+  return max > 0 && habitName
+    ? `Longest chain · ${habitName}`
+    : "Longest chain"
+}
+
+test("Analytics longest chain: bounded to selected 7-day period and never exceeds total check-ins in that window", () => {
+  // Scenario matching user report:
+  // User has 6 consecutive daily check-ins: Oct 14 through Oct 19.
+  // Today is Oct 21. Timeframe filter is 7 days (Oct 15 to Oct 21).
+  // Total check-ins inside 7-day window is 5 (Oct 15, 16, 17, 18, 19).
+  // Oct 14 check-in is outside the 7-day window.
+  const today = "2026-10-21"
+  const startDate7Day = addDaysToDateString(today, -6) // "2026-10-15"
+  const logs = [
+    "2026-10-14", // outside 7-day window
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-17",
+    "2026-10-18",
+    "2026-10-19",
+  ]
+  const frequency = [0, 1, 2, 3, 4, 5, 6] // daily
+
+  const habit = { id: "h-1", name: "Morning Run", frequency, created_at: "2026-10-01" }
+  const habits = [habit]
+  const logsByHabit = { "h-1": logs }
+
+  const totalCheckIns7Day = calculateAnalyticsCheckIns(
+    habits,
+    logsByHabit,
+    7,
+    startDate7Day,
+    today
+  )
+
+  const periodStreak = calculatePeriodLongestStreak(
+    logs,
+    frequency,
+    startDate7Day,
+    today,
+    "2026-10-01"
+  )
+
+  assert.equal(totalCheckIns7Day, 5, "Total check-ins in 7-day window must be 5")
+  assert.equal(periodStreak, 5, "Longest chain in 7-day window must be 5, never pulling 6 from outside")
+  assert.ok(
+    periodStreak <= totalCheckIns7Day,
+    `Longest chain (${periodStreak}) must not exceed total check-ins (${totalCheckIns7Day})`
+  )
+})
+
+test("Analytics longest chain: compares multiple habits within timeframe and bounds to window check-ins", () => {
+  const today = "2026-10-21"
+  const startDate7Day = "2026-10-15"
+
+  const habits = [
+    { id: "h-1", name: "Habit A", frequency: [0, 1, 2, 3, 4, 5, 6], created_at: "2026-10-01" },
+    { id: "h-2", name: "Habit B", frequency: [0, 1, 2, 3, 4, 5, 6], created_at: "2026-10-01" },
+  ]
+
+  // Habit A has 3 check-ins in window, Habit B has 2 check-ins in window
+  const logsByHabit = {
+    "h-1": ["2026-10-15", "2026-10-16", "2026-10-17"],
+    "h-2": ["2026-10-18", "2026-10-19"],
+  }
+
+  const totalCheckIns7Day = calculateAnalyticsCheckIns(
+    habits,
+    logsByHabit,
+    7,
+    startDate7Day,
+    today
+  )
+
+  let maxStreak = 0
+  let bestHabit = ""
+  for (const h of habits) {
+    const s = calculatePeriodLongestStreak(
+      logsByHabit[h.id],
+      h.frequency,
+      startDate7Day,
+      today,
+      h.created_at
+    )
+    if (s > maxStreak) {
+      maxStreak = s
+      bestHabit = h.name
+    }
+  }
+
+  assert.equal(totalCheckIns7Day, 5)
+  assert.equal(maxStreak, 3)
+  assert.equal(bestHabit, "Habit A")
+  assert.ok(maxStreak <= totalCheckIns7Day)
+})
+
+test("Analytics longest chain: handles unscheduled days within period without false streak resets", () => {
+  // Habit scheduled on Mon (1), Wed (3), Fri (5)
+  // Week of Oct 12-18, 2026:
+  // Mon Oct 12: checked
+  // Wed Oct 14: checked
+  // Fri Oct 16: checked
+  // Sat Oct 17: unscheduled
+  // Sun Oct 18: unscheduled
+  const frequency = [1, 3, 5]
+  const logs = ["2026-10-12", "2026-10-14", "2026-10-16"]
+  const startDate = "2026-10-12"
+  const today = "2026-10-18"
+
+  const streak = calculatePeriodLongestStreak(logs, frequency, startDate, today)
+  assert.equal(streak, 3, "All 3 scheduled days in period were completed")
+})
+
+test("Analytics longest chain card: label formatting clearly specifies Longest chain and habit name", () => {
+  assert.equal(
+    formatStreakCardLabel(5, "Morning Run"),
+    "Longest chain · Morning Run",
+    "Formats label with Longest chain prefix and habit name"
+  )
+  assert.equal(
+    formatStreakCardLabel(0, ""),
+    "Longest chain",
+    "Formats label as Longest chain when 0"
+  )
+})
+

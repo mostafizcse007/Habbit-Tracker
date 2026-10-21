@@ -3,7 +3,13 @@ import type { Database } from "@/types/database"
 
 export async function fetchAllLogs(
   supabase: SupabaseClient<Database>,
-  habitId?: string
+  optionsOrHabitId?:
+    | string
+    | {
+        habitId?: string
+        userId?: string
+        habitIds?: string[]
+      }
 ): Promise<{
   data: { habit_id: string; completed_on: string; note: string | null }[]
   error: string | null
@@ -12,6 +18,21 @@ export async function fetchAllLogs(
   let from = 0
   const allRows: { habit_id: string; completed_on: string; note: string | null }[] = []
   let hasNoteColumn = true
+
+  const habitId =
+    typeof optionsOrHabitId === "string"
+      ? optionsOrHabitId
+      : optionsOrHabitId?.habitId
+  const userId =
+    typeof optionsOrHabitId === "object" ? optionsOrHabitId?.userId : undefined
+  const habitIds =
+    typeof optionsOrHabitId === "object"
+      ? optionsOrHabitId?.habitIds
+      : undefined
+
+  if (habitIds && habitIds.length === 0) {
+    return { data: [], error: null }
+  }
 
   while (true) {
     let query = hasNoteColumn
@@ -26,8 +47,14 @@ export async function fetchAllLogs(
           .order("completed_on", { ascending: true })
           .order("id", { ascending: true })
 
+    if (userId) {
+      query = query.eq("user_id", userId)
+    }
+
     if (habitId) {
       query = query.eq("habit_id", habitId)
+    } else if (habitIds && habitIds.length > 0) {
+      query = query.in("habit_id", habitIds)
     }
 
     const { data, error } = await query.range(from, from + PAGE_SIZE - 1)

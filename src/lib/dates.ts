@@ -27,3 +27,33 @@ export function getLastNDates(n: number, today: string): string[] {
   }
   return dates
 }
+
+export function formatShortDate(dateStr: string): string {
+  const date = parseLocalDateString(dateStr)
+  const day = date.getDate()
+  const month = date.toLocaleDateString("en-US", { month: "short" })
+  return `${day} ${month}`
+}
+
+export function formatDateRange(startDateStr: string, endDateStr: string): string {
+  const start = parseLocalDateString(startDateStr)
+  const end = parseLocalDateString(endDateStr)
+
+  const startDay = start.getDate()
+  const endDay = end.getDate()
+
+  const startMonth = start.toLocaleDateString("en-US", { month: "short" })
+  const endMonth = end.toLocaleDateString("en-US", { month: "short" })
+
+  const startYear = start.getFullYear()
+  const endYear = end.getFullYear()
+
+  if (startYear === endYear) {
+    if (startMonth === endMonth) {
+      return `${startDay} – ${endDay} ${startMonth} ${startYear}`
+    }
+    return `${startDay} ${startMonth} – ${endDay} ${endMonth} ${startYear}`
+  }
+
+  return `${startDay} ${startMonth} ${startYear} – ${endDay} ${endMonth} ${endYear}`
+}

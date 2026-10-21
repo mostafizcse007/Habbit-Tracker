@@ -182,6 +182,9 @@ export async function archiveHabit(id: string): Promise<HabitActionState> {
     return { error: error.message }
   }
 
+  // Reconcile achievements immediately so archiving habit revokes badges whose thresholds are no longer met
+  await reconcileUserAchievements(supabase, user.id)
+
   revalidatePath("/habits")
   revalidatePath("/dashboard")
   revalidatePath("/analytics")
@@ -256,6 +259,9 @@ export async function unarchiveHabit(id: string): Promise<HabitActionState> {
   if (error) {
     return { error: error.message }
   }
+
+  // Reconcile achievements immediately so unarchiving habit restores valid badges
+  await reconcileUserAchievements(supabase, user.id)
 
   revalidatePath("/habits")
   revalidatePath("/dashboard")

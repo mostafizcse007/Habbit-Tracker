@@ -4,6 +4,8 @@ import { useMemo, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import type { Habit } from "@/types"
 import {
+  addDaysToDateString,
+  formatDateRange,
   getLocalDateString,
   getLastNDates,
   getLocalWeekday,
@@ -13,6 +15,7 @@ import { calculateStreaks, calculateCompletionRate } from "@/lib/streaks"
 import { createClient } from "@/lib/supabase/client"
 import { fetchAllLogs } from "@/lib/logs"
 import { toggleHabitLog, saveHabitNote } from "@/app/(app)/dashboard/actions"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { HabitDialog } from "@/components/habits/habit-dialog"
@@ -53,8 +56,7 @@ export function cellState(
     return "off"
   }
 
-  const createdOn = getLocalDateString(new Date(habit.created_at))
-  if (date < createdOn) {
+  if (date > today) {
     return "off"
   }
 
@@ -87,6 +89,7 @@ export function DashboardContent({ habits }: DashboardContentProps) {
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set())
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [weekOffset, setWeekOffset] = useState<number>(0)
 
   const prevAllDoneRef = useRef<boolean | null>(null)
   const [animatingMarker, setAnimatingMarker] = useState(false)
@@ -351,6 +354,21 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     return list.find((n) => !dismissedNudgeIds.has(n.id)) ?? null
   }, [habits, logsByHabit, streaksByHabit, today, dismissedNudgeIds])
 
+  const endDate = useMemo(() => {
+    if (!today) return ""
+    return addDaysToDateString(today, weekOffset * 7)
+  }, [today, weekOffset])
+
+  const days = useMemo(() => {
+    if (!endDate) return []
+    return getLastNDates(7, endDate)
+  }, [endDate])
+
+  const weekRangeLabel = useMemo(() => {
+    if (days.length === 0) return ""
+    return formatDateRange(days[0], days[days.length - 1])
+  }, [days])
+
   if (isLoading || !today) {
     return (
       <div className="pt-7 md:pt-14 space-y-6">
@@ -390,7 +408,6 @@ export function DashboardContent({ habits }: DashboardContentProps) {
     )
   }
 
-  const days = getLastNDates(7, today)
   const openTodayHabits = scheduledTodayHabits.filter(
     (h) => !(logsByHabit[h.id] ?? []).includes(today)
   )
@@ -424,7 +441,7 @@ export function DashboardContent({ habits }: DashboardContentProps) {
       logs,
       habit.frequency,
       createdOn,
-      today,
+      days[days.length - 1] ?? today,
       7
     )
     totalScheduledWeek += rateStats.scheduled
@@ -447,36 +464,92 @@ export function DashboardContent({ habits }: DashboardContentProps) {
             aria-live="polite"
             className="mt-[14px] md:mt-[18px] text-[16px] md:text-[19px] leading-[1.4] text-text-soft max-w-[520px]"
           >
-            {isAllDone ? (
-              <>
-                {doneToday} of {totalToday} done.{" "}
-                <span
-                  className={cn(animatingMarker && "anim-marker-swipe")}
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(transparent 58%, var(--marker) 58%, var(--marker) 92%, transparent 92%)",
-                    backgroundRepeat: "no-repeat",
-                    backgroundSize: "100% 100%",
-                    padding: "0 4px",
-                    margin: "0 -4px",
-                  }}
-                >
-                  Nothing left for today.
-                </span>
-              </>
+            {weekOffset === 0 ? (
+              isAllDone ? (
+                <>
+                  {doneToday} of {totalToday} done.{" "}
+                  <span
+                    className={cn(animatingMarker && "anim-marker-swipe")}
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(transparent 58%, var(--marker) 58%, var(--marker) 92%, transparent 92%)",
+                      backgroundRepeat: "no-repeat",
+                      backgroundSize: "100% 100%",
+                      padding: "0 4px",
+                      margin: "0 -4px",
+                    }}
+                  >
+                    Nothing left for today.
+                  </span>
+                </>
+              ) : (
+                sentence
+              )
             ) : (
-              sentence
+              <span>
+                Viewing {weekOffset === -1 ? "last week" : `${Math.abs(weekOffset)} weeks ago`}:{" "}
+                <strong className="text-foreground font-semibold">{weekRangeLabel}</strong>.{" "}
+                <button
+                  type="button"
+                  onClick={() => setWeekOffset(0)}
+                  className="font-semibold text-foreground underline hover:opacity-80 cursor-pointer"
+                >
+                  Back to today
+                </button>
+              </span>
             )}
           </p>
         </div>
 
-        <HabitDialog
-          trigger={
-            <Button className="w-full mt-5 h-12 md:w-auto md:mt-0 md:h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer">
-              New habit
-            </Button>
-          }
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1 p-1 rounded-[10px] border border-border bg-card shadow-xs">
+            <button
+              type="button"
+              onClick={() => setWeekOffset((prev) => prev - 1)}
+              aria-label="Previous week"
+              title="Previous week"
+              className="size-[34px] rounded-[7px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeekOffset(0)}
+              aria-label="Today / Current week"
+              title={
+                weekOffset === 0
+                  ? "Viewing current week"
+                  : "Jump to today / current week"
+              }
+              className={cn(
+                "h-[34px] px-3 rounded-[7px] text-[13px] font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                weekOffset === 0
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              )}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => setWeekOffset((prev) => Math.min(0, prev + 1))}
+              disabled={weekOffset === 0}
+              aria-label="Next week"
+              title="Next week"
+              className="size-[34px] rounded-[7px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-40 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+
+          <HabitDialog
+            trigger={
+              <Button className="w-full mt-2 sm:mt-0 sm:w-auto h-11 px-5 rounded-[10px] bg-primary text-primary-foreground text-[15px] font-semibold cursor-pointer">
+                New habit
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       {topNudge && (
@@ -533,13 +606,38 @@ export function DashboardContent({ habits }: DashboardContentProps) {
         </div>
       )}
 
+      {weekOffset < 0 && (
+        <div
+          role="status"
+          className="mt-6 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-[10px] bg-muted/60 border border-border text-[13px]"
+        >
+          <span className="text-muted-foreground">
+            Viewing history:{" "}
+            <strong className="text-foreground font-semibold">
+              {weekRangeLabel}
+            </strong>{" "}
+            ({Math.abs(weekOffset)}{" "}
+            {Math.abs(weekOffset) === 1 ? "week" : "weeks"} ago). Tap any square to fill in missed check-ins.
+          </span>
+          <button
+            type="button"
+            onClick={() => setWeekOffset(0)}
+            className="text-foreground font-semibold hover:underline cursor-pointer shrink-0"
+          >
+            Jump to Current Week &rarr;
+          </button>
+        </div>
+      )}
+
       <WeekSheet
         className={
-          Object.values(logsByHabit).every((logs) => logs.length === 0)
+          weekOffset < 0
             ? "mt-4"
-            : allTags.length > 0
+            : Object.values(logsByHabit).every((logs) => logs.length === 0)
               ? "mt-4"
-              : undefined
+              : allTags.length > 0
+                ? "mt-4"
+                : undefined
         }
         habits={habitsToRender}
         days={days}
@@ -563,8 +661,10 @@ export function DashboardContent({ habits }: DashboardContentProps) {
 
       {totalScheduledWeek > 0 && (
         <p className="mt-7 md:mt-9 text-[18px] md:text-[20px] leading-[1.45] tracking-[-0.01em] text-foreground max-w-[600px]">
-          You have done {totalCompletedWeek} of the {totalScheduledWeek} check-ins
-          you planned this week,{" "}
+          You have done {totalCompletedWeek} of the {totalScheduledWeek} check-ins{" "}
+          {weekOffset === 0
+            ? "you planned this week"
+            : `you planned for the week of ${weekRangeLabel}`},{" "}
           <strong className="font-bold">{weekCompletionRate}%</strong>.
           {bestCurrentStreak > 0 &&
             ` The longest chain right now is ${bestStreakHabitName}, at ${bestCurrentStreak} ${

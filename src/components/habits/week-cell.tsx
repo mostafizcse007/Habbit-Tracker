@@ -7,6 +7,7 @@ interface WeekCellProps {
   color: string
   size?: "desktop" | "mobile"
   label: string
+  title?: string
   pending?: boolean
   onToggle?: () => void
   justChecked?: boolean
@@ -18,6 +19,7 @@ export function WeekCell({
   color,
   size = "desktop",
   label,
+  title,
   pending = false,
   onToggle,
   justChecked = false,
@@ -28,6 +30,7 @@ export function WeekCell({
       <span
         className="w-[10px] h-[2px] rounded-[1px] bg-line-strong inline-block"
         role="img"
+        title={title ?? label}
         aria-label={label}
       />
     )
@@ -43,6 +46,7 @@ export function WeekCell({
       type="button"
       onClick={onToggle}
       disabled={pending}
+      title={title ?? (hasNote ? `${label}, has note` : label)}
       aria-label={hasNote ? `${label}, has note` : label}
       aria-pressed={isDone}
       className={cn(

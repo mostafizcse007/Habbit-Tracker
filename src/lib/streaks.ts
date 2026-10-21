@@ -68,8 +68,11 @@ export function calculateStreaks(
     checkDate = addDaysToDateString(today, -1)
   }
 
+  const effectiveCreatedOn =
+    createdOn && earliest < createdOn ? earliest : createdOn
+
   while (true) {
-    if (createdOn && checkDate < createdOn) break
+    if (effectiveCreatedOn && checkDate < effectiveCreatedOn) break
     if (checkDate < earliest) break
 
     const weekday = getLocalWeekday(parseLocalDateString(checkDate))
@@ -125,7 +128,7 @@ export function calculateStreaks(
 
   for (let i = 0; i < 30; i++) {
     const d = addDaysToDateString(today, -i)
-    if (createdOn && d < createdOn) break
+    if (effectiveCreatedOn && d < effectiveCreatedOn) break
     const weekday = getLocalWeekday(parseLocalDateString(d))
     if (frequency.includes(weekday)) {
       if (i < 7) {
@@ -171,9 +174,13 @@ export function calculateCompletionRate(
   let scheduled = 0
   let completed = 0
 
+  const sorted = [...logDates].sort()
+  const effectiveCreatedOn =
+    sorted.length > 0 && sorted[0] < createdOn ? sorted[0] : createdOn
+
   const windowStartCandidate = addDaysToDateString(today, -(windowDays - 1))
   let currentDateStr =
-    windowStartCandidate > createdOn ? windowStartCandidate : createdOn
+    windowStartCandidate > effectiveCreatedOn ? windowStartCandidate : effectiveCreatedOn
 
   while (currentDateStr <= today) {
     const weekday = getLocalWeekday(parseLocalDateString(currentDateStr))

@@ -108,7 +108,7 @@ async function reconcileUserAchievements(supabase, userId, habits, logsByHabit) 
  */
 function computeBadgePresentation(achievementsDefs, unlockedMap, stats) {
   const isBadgeEligible = (key) => {
-    if (!stats) return true
+    if (!stats) return false
     if (stats.totalCheckIns === 0) return false
     if (key === "first_checkin") return stats.totalCheckIns >= 1
     if (key === "checkins_25") return stats.totalCheckIns >= 25
@@ -117,6 +117,9 @@ function computeBadgePresentation(achievementsDefs, unlockedMap, stats) {
     if (key === "streak_7") return stats.longestStreak >= 7
     if (key === "streak_30") return stats.longestStreak >= 30
     if (key === "streak_100") return stats.longestStreak >= 100
+    if (key === "perfect_day") return stats.totalCheckIns >= 3
+    if (key === "perfect_week") return stats.totalCheckIns >= 21 && stats.longestStreak >= 7
+    if (key === "comeback") return stats.totalCheckIns >= 2
     return true
   }
 
@@ -369,4 +372,100 @@ test("reconcileUserAchievements: deleting habit revokes badges whose thresholds 
   assert.deepEqual(result.revoked, ["checkins_25"])
   assert.equal(mockDb.rows.length, 1)
   assert.equal(mockDb.rows[0].key, "first_checkin")
+})
+
+test("reconcileUserAchievements: unchecking/deleting a check-in revokes badges when metrics drop below thresholds", async () => {
+  const userId = "user-uncheck-test"
+
+  // 18 non-consecutive logs + 7 continuous days (Oct 15 to Oct 21) = 25 check-ins total
+  const initialLogs = [
+    ...Array.from({ length: 18 }, (_, i) =>
+      i < 10
+        ? `2026-08-${String(i * 3 + 1).padStart(2, "0")}`
+        : `2026-09-${String((i - 10) * 3 + 1).padStart(2, "0")}`
+    ),
+    "2026-10-15",
+    "2026-10-16",
+    "2026-10-17",
+    "2026-10-18",
+    "2026-10-19",
+    "2026-10-20",
+    "2026-10-21", // 7 continuous days (Oct 15 to Oct 21)
+  ]
+  assert.equal(initialLogs.length, 25)
+
+  const habits = [{ id: "h1", user_id: userId, name: "Habit 1" }]
+  const mockDb = createMockAchievementsDb([
+    { user_id: userId, key: "first_checkin", unlocked_at: "2026-09-01T00:00:00Z" },
+    { user_id: userId, key: "checkins_25", unlocked_at: "2026-10-21T00:00:00Z" },
+    { user_id: userId, key: "streak_7", unlocked_at: "2026-10-21T00:00:00Z" },
+  ])
+
+  // User unchecks/deletes today's check-in (2026-10-21)
+  // Now 24 check-ins, longest streak breaks to 6 days
+  const logsAfterUncheck = {
+    h1: initialLogs.filter((d) => d !== "2026-10-21"),
+  }
+  assert.equal(logsAfterUncheck.h1.length, 24)
+
+  const result = await reconcileUserAchievements(mockDb, userId, habits, logsAfterUncheck, "2026-10-21")
+
+  assert.equal(result.stats.totalCheckIns, 24)
+  assert.equal(result.stats.longestStreak, 6)
+  assert.deepEqual(result.revoked.sort(), ["checkins_25", "streak_7"].sort())
+  assert.equal(mockDb.rows.length, 1)
+  assert.equal(mockDb.rows[0].key, "first_checkin")
+})
+
+test("reconcileUserAchievements: archiving habit revokes badges whose thresholds are no longer met", async () => {
+  const userId = "user-archive-test"
+
+  // User had 2 habits: h1 (5 logs) and h2 (20 logs). Total = 25 logs.
+  const activeHabitsBefore = [
+    { id: "h1", user_id: userId, name: "Habit 1", archived: false },
+    { id: "h2", user_id: userId, name: "Habit 2", archived: false },
+  ]
+  const logs = {
+    h1: ["2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05"],
+    h2: Array.from({ length: 20 }, (_, i) => `2026-09-${String(i + 1).padStart(2, "0")}`),
+  }
+
+  const mockDb = createMockAchievementsDb([
+    { user_id: userId, key: "first_checkin", unlocked_at: "2026-09-01T00:00:00Z" },
+    { user_id: userId, key: "checkins_25", unlocked_at: "2026-10-05T00:00:00Z" },
+  ])
+
+  // Habit 2 is archived -> only active habits (h1) are evaluated
+  const activeHabitsAfter = activeHabitsBefore.filter((h) => h.id === "h1")
+  const activeLogsAfter = { h1: logs.h1 }
+
+  const result = await reconcileUserAchievements(mockDb, userId, activeHabitsAfter, activeLogsAfter, "2026-10-21")
+
+  assert.equal(result.stats.totalCheckIns, 5)
+  assert.deepEqual(result.revoked, ["checkins_25"])
+  assert.equal(mockDb.rows.length, 1)
+  assert.equal(mockDb.rows[0].key, "first_checkin")
+})
+
+test("Badge presentation: null stats never shows locked/threshold badges as unlocked", () => {
+  const defs = [
+    { key: "first_checkin", title: "First check-in" },
+    { key: "checkins_25", title: "25 check-ins" },
+    { key: "checkins_100", title: "100 check-ins" },
+    { key: "streak_7", title: "One week" },
+  ]
+
+  const staleMap = new Map([
+    ["first_checkin", "2026-10-14T10:00:00Z"],
+    ["checkins_25", "2026-10-14T10:00:00Z"],
+    ["checkins_100", "2026-10-14T10:00:00Z"],
+    ["streak_7", "2026-10-14T10:00:00Z"],
+  ])
+
+  // stats is null (e.g. before loading or if query errored)
+  const list = computeBadgePresentation(defs, staleMap, null)
+
+  for (const item of list) {
+    assert.equal(item.isUnlocked, false, `${item.key} must be locked when stats are null`)
+  }
 })

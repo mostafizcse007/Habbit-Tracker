@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { addDaysToDateString } from "@/lib/dates"
 import { getTodayInTimeZone, isValidTimeZone } from "@/lib/timezone"
+import { reconcileUserAchievements } from "@/lib/achievements-sync"
 
 import { calculateStreaks, calculateCompletionRate } from "@/lib/streaks"
 
@@ -107,6 +108,9 @@ export async function toggleHabitLog(
     if (error) {
       return { error: error.message }
     }
+
+    // Reconcile achievements when a check-in is deleted/unchecked so revoked badges are pruned immediately
+    await reconcileUserAchievements(supabase, user.id)
   }
 
   revalidatePath("/dashboard")

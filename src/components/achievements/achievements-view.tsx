@@ -133,7 +133,7 @@ export function AchievementsView({
 
   const { list, unlockedCount, totalCount } = useMemo(() => {
     const isBadgeEligible = (key: string): boolean => {
-      if (!stats) return true
+      if (!stats) return false
       if (stats.totalCheckIns === 0) return false
       if (key === "first_checkin") return stats.totalCheckIns >= 1
       if (key === "checkins_25") return stats.totalCheckIns >= 25
@@ -142,6 +142,10 @@ export function AchievementsView({
       if (key === "streak_7") return stats.longestStreak >= 7
       if (key === "streak_30") return stats.longestStreak >= 30
       if (key === "streak_100") return stats.longestStreak >= 100
+      if (key === "perfect_day") return stats.totalCheckIns >= 3
+      if (key === "perfect_week")
+        return stats.totalCheckIns >= 21 && stats.longestStreak >= 7
+      if (key === "comeback") return stats.totalCheckIns >= 2
       return true
     }
 

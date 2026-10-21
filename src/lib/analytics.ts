@@ -370,3 +370,54 @@ export function buildHighlights(args: BuildHighlightsArgs): string[] {
 
   return sentences
 }
+
+/**
+ * Calculates the longest consecutive check-in chain for a habit strictly within a bounded period [startDate, today].
+ * Concurrency within the period never exceeds the check-in count in that window.
+ */
+export function calculatePeriodLongestStreak(
+  logDates: string[],
+  frequency: number[],
+  startDate: string,
+  today: string,
+  createdOn?: string
+): number {
+  if (!logDates || logDates.length === 0 || !startDate || !today) return 0
+  const logSet = new Set(logDates)
+
+  const sorted = [...logDates].sort()
+  const earliest = sorted[0]
+  const effectiveCreatedOn =
+    createdOn && earliest < createdOn ? earliest : createdOn
+
+  let run = 0
+  let maxRun = 0
+  let currentDateStr = startDate
+
+  while (currentDateStr <= today) {
+    if (effectiveCreatedOn && currentDateStr < effectiveCreatedOn) {
+      currentDateStr = addDaysToDateString(currentDateStr, 1)
+      continue
+    }
+
+    const weekday = getLocalWeekday(parseLocalDateString(currentDateStr))
+    const isScheduled = frequency.includes(weekday)
+    const isCompleted = logSet.has(currentDateStr)
+
+    if (isCompleted) {
+      run++
+      if (run > maxRun) {
+        maxRun = run
+      }
+    } else if (isScheduled) {
+      if (currentDateStr !== today) {
+        run = 0
+      }
+    }
+
+    currentDateStr = addDaysToDateString(currentDateStr, 1)
+  }
+
+  return maxRun
+}
+

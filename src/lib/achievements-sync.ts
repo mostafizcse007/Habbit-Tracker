@@ -55,7 +55,11 @@ export async function reconcileUserAchievements(
     }
   }
 
-  const { data: logsData, error: logsError } = await fetchAllLogs(supabase)
+  const habitIds = (habits ?? []).map((h) => h.id)
+  const { data: logsData, error: logsError } = await fetchAllLogs(supabase, {
+    userId,
+    habitIds,
+  })
   if (logsError || !logsData) {
     return {
       success: false,
@@ -67,13 +71,13 @@ export async function reconcileUserAchievements(
     }
   }
 
-  const habitIds = new Set((habits ?? []).map((h) => h.id))
+  const habitIdSet = new Set(habitIds)
   const logsByHabit: Record<string, string[]> = {}
+  for (const id of habitIds) {
+    logsByHabit[id] = []
+  }
   for (const log of logsData) {
-    if (habitIds.has(log.habit_id)) {
-      if (!logsByHabit[log.habit_id]) {
-        logsByHabit[log.habit_id] = []
-      }
+    if (habitIdSet.has(log.habit_id)) {
       logsByHabit[log.habit_id].push(log.completed_on)
     }
   }
@@ -130,11 +134,21 @@ export async function reconcileUserAchievements(
 
   // 1. Prune/revoke stale badge records from database
   if (keysToDelete.length > 0) {
-    await supabase
+    const { error: delError } = await supabase
       .from("user_achievements")
       .delete()
       .eq("user_id", userId)
       .in("key", keysToDelete)
+
+    if (delError) {
+      for (const key of keysToDelete) {
+        await supabase
+          .from("user_achievements")
+          .delete()
+          .eq("user_id", userId)
+          .eq("key", key)
+      }
+    }
   }
 
   // 2. Insert newly earned badge records
